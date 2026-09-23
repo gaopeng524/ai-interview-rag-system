@@ -1,0 +1,87 @@
+spring:
+  application:
+    name: demo
+  datasource:
+    # 从环境变量读取，未设置时用冒号后的默认值兜底（演示环境可直接连本地库）。
+    # 生产环境务必配置 DB_PASSWORD / JWT_SECRET 等环境变量，不要用明文。
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ai_chat}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: 3000ms
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+  # 禁用 Spring AI 内置重试（默认 10 次），避免与 ChatResilienceService 的手动重试叠加成双重重试
+  ai:
+    retry:
+      max-attempts: 1
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+
+jwt:
+  # JWT 签名密钥：生产环境必须用环境变量 JWT_SECRET 覆盖，长度至少 32 字符。
+  secret: ${JWT_SECRET:my-super-secret-key-for-ai-chatbot-project-2026}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# ===== 多供应商配置（LlmProviderRegistry 读取这里） =====
+# 默认用哪个供应商；各供应商连接信息在 app.ai.providers.<id>.* 下，key 就是供应商 id。
+# 切换默认模型可在前端界面随时切换，已实现数据库持久化存储与热重载。
+app:
+  llamaparse:
+    enabled: ${LLAMAPARSE_ENABLED:true}
+    api-key: ${LLAMA_CLOUD_API_KEY:${LLAMAPARSE_API_KEY:}}
+    base-url: https://api.cloud.llamaindex.ai/api/parsing
+    timeout-seconds: 60
+  mem0:
+    base-url: ${MEM0_BASE_URL:http://localhost:8888/v1}
+    enabled: ${MEM0_ENABLED:true}
+  ai:
+    default-provider: xiaomi
+    providers:
+      xiaomi:
+        base-url: https://api.mimo.mi.com/v1
+        api-key: ${XIAOMI_API_KEY:${MIMO_API_KEY:}}
+        model: mimo-v2.5-pro
+        supports-embedding: false
+      deepseek:
+        # 统一走 OpenAI 兼容协议（GA 版本使用 OpenAIClient，ApiPathResolver 会自动补 /v1）
+        base-url: https://api.deepseek.com
+        # API Key 从环境变量读取：Windows 用 setx DEEPSEEK_API_KEY sk-xxx，然后重启终端/IDE
+        api-key: ${DEEPSEEK_API_KEY:}
+        model: deepseek-v4-flash
+      glm:
+        # 可选：智谱 GLM-4-Flash（免费，用来验证多供应商）
+        # 没配 GLM_API_KEY 时留空字符串即可，不会报错（只是别用它做默认）
+        base-url: https://open.bigmodel.cn/api/paas/v4
+        api-key: ${GLM_API_KEY:}
+        model: glm-4-flash
+      dashscope:
+        base-url: https://dashscope.aliyuncs.com/compatible-mode
+        api-key: ${DASHSCOPE_API_KEY:}
+        model: qwen-turbo
+        embedding-model: text-embedding-v3
+        supports-embedding: true
+
+logging:
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%15.15t]){faint} %clr([%X{traceId:-}]){magenta} %clr(%-40.40logger{39}){cyan} : %m%n"
+  level:
+    org.springframework.ai.chat.client.advisor.PromptChatMemoryAdvisor: DEBUG
+    # 打印 Memory 拼接完成后、真正送给模型的完整 Prompt，以及模型聚合后的完整响应
+    org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor: DEBUG

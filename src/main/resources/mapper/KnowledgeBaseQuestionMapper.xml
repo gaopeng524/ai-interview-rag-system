@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.modules.knowledgebase.mapper.KnowledgeBaseQuestionMapper">
+
+    <insert id="batchInsert">
+        INSERT INTO knowledge_base_questions (
+            knowledge_base_id, skill_id, difficulty, type, category,
+            question, topic_summary, reference_answer, key_points,
+            scoring_rubric, follow_ups, source_context, status,
+            created_at, updated_at
+        ) VALUES
+        <foreach collection="list" item="q" separator=",">
+            (
+                #{q.knowledgeBaseId}, #{q.skillId}, #{q.difficulty}, #{q.type}, #{q.category},
+                #{q.question}, #{q.topicSummary}, #{q.referenceAnswer}, #{q.keyPoints},
+                #{q.scoringRubric}, #{q.followUps}, #{q.sourceContext}, #{q.status},
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        </foreach>
+    </insert>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO knowledge_base_questions (
+            knowledge_base_id, skill_id, difficulty, type, category,
+            question, topic_summary, reference_answer, key_points,
+            scoring_rubric, follow_ups, source_context, status,
+            created_at, updated_at
+        ) VALUES (
+            #{knowledgeBaseId}, #{skillId}, #{difficulty}, #{type}, #{category},
+            #{question}, #{topicSummary}, #{referenceAnswer}, #{keyPoints},
+            #{scoringRubric}, #{followUps}, #{sourceContext}, #{status},
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE knowledge_base_questions
+        SET difficulty = #{difficulty},
+            type = #{type},
+            category = #{category},
+            question = #{question},
+            topic_summary = #{topicSummary},
+            reference_answer = #{referenceAnswer},
+            key_points = #{keyPoints},
+            scoring_rubric = #{scoringRubric},
+            follow_ups = #{followUps},
+            source_context = #{sourceContext},
+            status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE knowledge_base_questions
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM knowledge_base_questions WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByKnowledgeBaseId">
+        DELETE FROM knowledge_base_questions WHERE knowledge_base_id = #{kbId}
+    </delete>
+
+    <select id="findById" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBaseQuestionEntity">
+        SELECT id, knowledge_base_id as knowledgeBaseId, skill_id as skillId,
+               difficulty, type, category, question, topic_summary as topicSummary,
+               reference_answer as referenceAnswer, key_points as keyPoints,
+               scoring_rubric as scoringRubric, follow_ups as followUps,
+               source_context as sourceContext, status,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM knowledge_base_questions
+        WHERE id = #{id}
+    </select>
+
+    <select id="findQuestions" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBaseQuestionEntity">
+        SELECT id, knowledge_base_id as knowledgeBaseId, skill_id as skillId,
+               difficulty, type, category, question, topic_summary as topicSummary,
+               reference_answer as referenceAnswer, key_points as keyPoints,
+               scoring_rubric as scoringRubric, follow_ups as followUps,
+               source_context as sourceContext, status,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM knowledge_base_questions
+        WHERE knowledge_base_id = #{kbId}
+          <if test="status != null and status != ''">
+              AND status = #{status}
+          </if>
+          <if test="category != null and category != ''">
+              AND category = #{category}
+          </if>
+          <if test="difficulty != null and difficulty != ''">
+              AND difficulty = #{difficulty}
+          </if>
+          <if test="keyword != null and keyword != ''">
+              AND (question LIKE CONCAT('%', #{keyword}, '%') OR topic_summary LIKE CONCAT('%', #{keyword}, '%'))
+          </if>
+        ORDER BY id DESC
+    </select>
+
+    <select id="countCategoriesByKbId" resultType="com.example.demo.modules.knowledgebase.model.dto.KnowledgeBaseQuestionDTO$CategoryCount">
+        SELECT COALESCE(category, '通用') as category, COUNT(*) as count
+        FROM knowledge_base_questions
+        WHERE knowledge_base_id = #{kbId}
+          AND status != 'ARCHIVED'
+        GROUP BY COALESCE(category, '通用')
+        ORDER BY count DESC
+    </select>
+
+    <select id="countByKbId" resultType="int">
+        SELECT COUNT(*) FROM knowledge_base_questions WHERE knowledge_base_id = #{kbId} AND status != 'ARCHIVED'
+    </select>
+
+</mapper>

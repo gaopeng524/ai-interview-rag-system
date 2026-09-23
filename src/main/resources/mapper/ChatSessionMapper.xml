@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.modules.chat.mapper.ChatSessionMapper">
+
+    <insert id="insert"
+            parameterType="com.example.demo.modules.chat.model.entity.ChatSession"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO chat_sessions (user_id, title, is_pinned)
+        VALUES (#{userId}, #{title}, COALESCE(#{isPinned}, FALSE))
+    </insert>
+
+    <select id="findByIdAndUserId"
+            resultType="com.example.demo.modules.chat.model.entity.ChatSession">
+        SELECT
+            id,
+            user_id as userId,
+            title,
+            COALESCE(is_pinned, FALSE) as isPinned,
+            created_at as createdAt,
+            updated_at as updatedAt
+        FROM chat_sessions
+        WHERE id = #{id}
+        AND user_id = #{userId}
+    </select>
+
+    <select id="findByUserId"
+            resultType="com.example.demo.modules.chat.model.entity.ChatSession">
+        SELECT
+            id,
+            user_id as userId,
+            title,
+            COALESCE(is_pinned, FALSE) as isPinned,
+            created_at as createdAt,
+            updated_at as updatedAt
+        FROM chat_sessions
+        WHERE user_id = #{userId}
+        ORDER BY is_pinned DESC, updated_at DESC, created_at DESC
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM chat_sessions
+        WHERE id = #{id}
+    </delete>
+
+    <update id="updateTitle">
+        UPDATE chat_sessions
+        SET title = #{title},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="togglePin">
+        UPDATE chat_sessions
+        SET is_pinned = NOT COALESCE(is_pinned, FALSE),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateUpdatedAt">
+        UPDATE chat_sessions
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insertSessionKnowledgeBases">
+        INSERT INTO chat_session_knowledge_bases (session_id, knowledge_base_id)
+        VALUES
+        <foreach item="kbId" collection="kbIds" separator=",">
+            (#{sessionId}, #{kbId})
+        </foreach>
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <delete id="deleteSessionKnowledgeBases">
+        DELETE FROM chat_session_knowledge_bases
+        WHERE session_id = #{sessionId}
+    </delete>
+
+    <select id="findKnowledgeBaseIdsBySessionId" resultType="java.lang.Long">
+        SELECT knowledge_base_id
+        FROM chat_session_knowledge_bases
+        WHERE session_id = #{sessionId}
+        ORDER BY knowledge_base_id ASC
+    </select>
+
+    <select id="findKnowledgeBasesBySessionId" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
+        SELECT kb.id, kb.name, kb.original_filename as originalFilename, kb.file_size as fileSize,
+               kb.content_type as contentType, kb.file_hash as fileHash, kb.category,
+               kb.vector_status as vectorStatus, kb.vector_error as vectorError,
+               kb.chunk_count as chunkCount, kb.uploaded_at as uploadedAt, kb.updated_at as updatedAt
+        FROM knowledge_bases kb
+        INNER JOIN chat_session_knowledge_bases skb ON kb.id = skb.knowledge_base_id
+        WHERE skb.session_id = #{sessionId}
+        ORDER BY kb.id ASC
+    </select>
+
+    <select id="countMessagesBySessionId" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_messages
+        WHERE session_id = #{sessionId}
+    </select>
+
+</mapper>

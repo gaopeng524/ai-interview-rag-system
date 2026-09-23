@@ -1,0 +1,109 @@
+services:
+  # ==============================================================================
+  # 1. PostgreSQL 数据库服务（集成 pgvector 高维向量插件）
+  # ==============================================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: interview-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_chat}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ==============================================================================
+  # 2. Redis 缓存与消息队列服务（Stream 异步队列 & 分布式排重锁）
+  # ==============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: interview-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==============================================================================
+  # 3. 后端应用服务 (Spring Boot 3.3 + Spring AI 2.0 GA)
+  # ==============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: interview-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ai_chat}
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-my-super-secret-key-for-ai-chatbot-project-2026}
+    ports:
+      - "8080:8080"
+
+  # ==============================================================================
+  # 4. 前端应用服务 (React 18 + Vite + TailwindCSS + Nginx 反向代理)
+  # ==============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: interview-frontend
+    restart: unless-stopped
+    extra_hosts:
+      - "app:host-gateway"
+    ports:
+      - "80:80"
+
+  # ==============================================================================
+  # 5. Mem0 独立自适应智能记忆中枢微服务 (FastAPI + mem0ai + pgvector)
+  # ==============================================================================
+  mem0:
+    build:
+      context: ./docker/mem0
+      dockerfile: Dockerfile
+    container_name: interview-mem0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: postgres
+      PG_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      PG_DATABASE: ${POSTGRES_DB:-ai_chat}
+      OPENAI_API_KEY: ${AI_API_KEY:-sk-dummy-key}
+      OPENAI_API_BASE: https://dashscope.aliyuncs.com/compatible-mode/v1
+      LLM_MODEL: qwen-turbo
+      EMBEDDING_MODEL: text-embedding-v3
+    ports:
+      - "8888:8888"
+
+# ==============================================================================
+# Docker 命名卷持久化
+# ==============================================================================
+volumes:
+  postgres_data:
+  redis_data:

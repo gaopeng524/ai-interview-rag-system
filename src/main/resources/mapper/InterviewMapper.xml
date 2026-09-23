@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.modules.interview.mapper.InterviewMapper">
+
+    <!-- ========== 会话操作 ========== -->
+
+    <insert id="insertSession" parameterType="com.example.demo.modules.interview.model.entity.InterviewSessionEntity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO interview_sessions (
+            session_id, user_id, skill_id, difficulty, resume_id,
+            resume_text, jd_text, total_questions, current_question_index,
+            status, evaluate_status, evaluate_error, overall_score,
+            overall_feedback, strengths, improvements, category_scores,
+            source_type, knowledge_base_id, interview_category,
+            created_at, updated_at
+        ) VALUES (
+            #{sessionId}, #{userId}, #{skillId}, #{difficulty}, #{resumeId},
+            #{resumeText}, #{jdText}, #{totalQuestions}, #{currentQuestionIndex},
+            #{status}, #{evaluateStatus}, #{evaluateError}, #{overallScore},
+            #{overallFeedback}, #{strengths}, #{improvements}, #{categoryScores},
+            #{sourceType}, #{knowledgeBaseId}, #{interviewCategory},
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="findSessionBySessionId" resultType="com.example.demo.modules.interview.model.entity.InterviewSessionEntity">
+        SELECT id, session_id as sessionId, user_id as userId, skill_id as skillId,
+               difficulty, resume_id as resumeId, resume_text as resumeText, jd_text as jdText,
+               total_questions as totalQuestions, current_question_index as currentQuestionIndex,
+               status, evaluate_status as evaluateStatus, evaluate_error as evaluateError,
+               overall_score as overallScore, overall_feedback as overallFeedback,
+               strengths, improvements, category_scores as categoryScores,
+               source_type as sourceType, knowledge_base_id as knowledgeBaseId,
+               interview_category as interviewCategory,
+               created_at::timestamp as createdAt, completed_at::timestamp as completedAt, updated_at::timestamp as updatedAt
+        FROM interview_sessions
+        WHERE session_id = #{sessionId}
+    </select>
+
+    <select id="findUnfinishedSession" resultType="com.example.demo.modules.interview.model.entity.InterviewSessionEntity">
+        SELECT id, session_id as sessionId, user_id as userId, skill_id as skillId,
+               difficulty, resume_id as resumeId, resume_text as resumeText, jd_text as jdText,
+               total_questions as totalQuestions, current_question_index as currentQuestionIndex,
+               status, evaluate_status as evaluateStatus, evaluate_error as evaluateError,
+               overall_score as overallScore, overall_feedback as overallFeedback,
+               strengths, improvements, category_scores as categoryScores,
+               source_type as sourceType, knowledge_base_id as knowledgeBaseId,
+               interview_category as interviewCategory,
+               created_at::timestamp as createdAt, completed_at::timestamp as completedAt, updated_at::timestamp as updatedAt
+        FROM interview_sessions
+        WHERE user_id = #{userId}
+          <if test="resumeId != null">
+              AND resume_id = #{resumeId}
+          </if>
+          AND status IN ('CREATED', 'IN_PROGRESS')
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findSessionsByUserId" resultType="com.example.demo.modules.interview.model.entity.InterviewSessionEntity">
+        SELECT id, session_id as sessionId, user_id as userId, skill_id as skillId,
+               difficulty, resume_id as resumeId, resume_text as resumeText, jd_text as jdText,
+               total_questions as totalQuestions, current_question_index as currentQuestionIndex,
+               status, evaluate_status as evaluateStatus, evaluate_error as evaluateError,
+               overall_score as overallScore, overall_feedback as overallFeedback,
+               strengths, improvements, category_scores as categoryScores,
+               source_type as sourceType, knowledge_base_id as knowledgeBaseId,
+               interview_category as interviewCategory,
+               created_at::timestamp as createdAt, completed_at::timestamp as completedAt, updated_at::timestamp as updatedAt
+        FROM interview_sessions
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findSessionsByResumeId" resultType="com.example.demo.modules.interview.model.entity.InterviewSessionEntity">
+        SELECT id, session_id as sessionId, user_id as userId, skill_id as skillId,
+               difficulty, resume_id as resumeId, resume_text as resumeText, jd_text as jdText,
+               total_questions as totalQuestions, current_question_index as currentQuestionIndex,
+               status, evaluate_status as evaluateStatus, evaluate_error as evaluateError,
+               overall_score as overallScore, overall_feedback as overallFeedback,
+               strengths, improvements, category_scores as categoryScores,
+               source_type as sourceType, knowledge_base_id as knowledgeBaseId,
+               interview_category as interviewCategory,
+               created_at::timestamp as createdAt, completed_at::timestamp as completedAt, updated_at::timestamp as updatedAt
+        FROM interview_sessions
+        WHERE resume_id = #{resumeId}
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="updateSessionStatus">
+        UPDATE interview_sessions
+        SET status = #{status},
+            current_question_index = #{currentQuestionIndex},
+            updated_at = CURRENT_TIMESTAMP
+            <if test="status == 'COMPLETED' or status == 'EVALUATED'">
+                , completed_at = CURRENT_TIMESTAMP
+            </if>
+        WHERE session_id = #{sessionId}
+    </update>
+
+    <update id="updateSessionEvaluation" parameterType="com.example.demo.modules.interview.model.entity.InterviewSessionEntity">
+        UPDATE interview_sessions
+        SET evaluate_status = #{evaluateStatus},
+            evaluate_error = #{evaluateError},
+            overall_score = #{overallScore},
+            overall_feedback = #{overallFeedback},
+            strengths = #{strengths},
+            improvements = #{improvements},
+            category_scores = #{categoryScores},
+            status = #{status},
+            completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE session_id = #{sessionId}
+    </update>
+
+    <delete id="deleteSessionBySessionId">
+        DELETE FROM interview_sessions
+        WHERE session_id = #{sessionId} AND user_id = #{userId}
+    </delete>
+
+    <!-- ========== 题目与作答操作 ========== -->
+
+    <insert id="batchInsertQuestions">
+        INSERT INTO interview_questions (
+            session_id, question_index, question, type, category,
+            topic_summary, user_answer, score, feedback,
+            is_follow_up, parent_question_index, reference_answer,
+            key_points, scoring_rubric, source_context,
+            created_at, updated_at
+        ) VALUES
+        <foreach collection="questions" item="q" separator=",">
+            (
+                #{q.sessionId}, #{q.questionIndex}, #{q.question}, #{q.type}, #{q.category},
+                #{q.topicSummary}, #{q.userAnswer}, #{q.score}, #{q.feedback},
+                COALESCE(#{q.isFollowUp}, FALSE), #{q.parentQuestionIndex}, #{q.referenceAnswer},
+                #{q.keyPoints}, #{q.scoringRubric}, #{q.sourceContext},
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        </foreach>
+    </insert>
+
+    <select id="findQuestionsBySessionId" resultType="com.example.demo.modules.interview.model.entity.InterviewQuestionEntity">
+        SELECT id, session_id as sessionId, question_index as questionIndex,
+               question, type, category, topic_summary as topicSummary,
+               user_answer as userAnswer, score, feedback,
+               is_follow_up as isFollowUp, parent_question_index as parentQuestionIndex,
+               reference_answer as referenceAnswer, key_points as keyPoints,
+               scoring_rubric as scoringRubric, source_context as sourceContext,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM interview_questions
+        WHERE session_id = #{sessionId}
+        ORDER BY question_index ASC
+    </select>
+
+    <select id="findQuestionByIndex" resultType="com.example.demo.modules.interview.model.entity.InterviewQuestionEntity">
+        SELECT id, session_id as sessionId, question_index as questionIndex,
+               question, type, category, topic_summary as topicSummary,
+               user_answer as userAnswer, score, feedback,
+               is_follow_up as isFollowUp, parent_question_index as parentQuestionIndex,
+               reference_answer as referenceAnswer, key_points as keyPoints,
+               scoring_rubric as scoringRubric, source_context as sourceContext,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM interview_questions
+        WHERE session_id = #{sessionId} AND question_index = #{questionIndex}
+        LIMIT 1
+    </select>
+
+    <update id="updateUserAnswer">
+        UPDATE interview_questions
+        SET user_answer = #{userAnswer},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE session_id = #{sessionId} AND question_index = #{questionIndex}
+    </update>
+
+    <update id="updateQuestionEvaluation" parameterType="com.example.demo.modules.interview.model.entity.InterviewQuestionEntity">
+        UPDATE interview_questions
+        SET score = #{score},
+            feedback = #{feedback},
+            reference_answer = #{referenceAnswer},
+            key_points = #{keyPoints},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE session_id = #{sessionId} AND question_index = #{questionIndex}
+    </update>
+
+    <delete id="deleteQuestionsBySessionId">
+        DELETE FROM interview_questions
+        WHERE session_id = #{sessionId}
+    </delete>
+
+</mapper>

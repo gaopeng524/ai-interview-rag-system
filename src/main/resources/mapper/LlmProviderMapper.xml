@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.modules.llmprovider.mapper.LlmProviderMapper">
+
+    <select id="findAll" resultType="com.example.demo.modules.llmprovider.model.entity.LlmProviderEntity">
+        SELECT id, base_url as baseUrl, api_key as apiKey, model,
+               embedding_model as embeddingModel, embedding_dimensions as embeddingDimensions,
+               supports_embedding as supportsEmbedding, temperature,
+               is_default as isDefault, is_default_embedding as isDefaultEmbedding,
+               created_at as createdAt, updated_at as updatedAt
+        FROM llm_provider_config
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="findById" resultType="com.example.demo.modules.llmprovider.model.entity.LlmProviderEntity">
+        SELECT id, base_url as baseUrl, api_key as apiKey, model,
+               embedding_model as embeddingModel, embedding_dimensions as embeddingDimensions,
+               supports_embedding as supportsEmbedding, temperature,
+               is_default as isDefault, is_default_embedding as isDefaultEmbedding,
+               created_at as createdAt, updated_at as updatedAt
+        FROM llm_provider_config
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.demo.modules.llmprovider.model.entity.LlmProviderEntity">
+        INSERT INTO llm_provider_config (
+            id, base_url, api_key, model, embedding_model,
+            embedding_dimensions, supports_embedding, temperature, is_default, is_default_embedding,
+            created_at, updated_at
+        ) VALUES (
+            #{id}, #{baseUrl}, #{apiKey}, #{model}, #{embeddingModel},
+            #{embeddingDimensions}, COALESCE(#{supportsEmbedding}, FALSE),
+            COALESCE(#{temperature}, 0.2), COALESCE(#{isDefault}, FALSE),
+            COALESCE(#{isDefaultEmbedding}, FALSE),
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="update" parameterType="com.example.demo.modules.llmprovider.model.entity.LlmProviderEntity">
+        UPDATE llm_provider_config
+        SET base_url = #{baseUrl},
+            api_key = #{apiKey},
+            model = #{model},
+            embedding_model = #{embeddingModel},
+            embedding_dimensions = #{embeddingDimensions},
+            supports_embedding = #{supportsEmbedding},
+            temperature = #{temperature},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM llm_provider_config
+        WHERE id = #{id}
+    </delete>
+
+    <update id="resetAllDefault">
+        UPDATE llm_provider_config
+        SET is_default = FALSE,
+            updated_at = CURRENT_TIMESTAMP
+    </update>
+
+    <update id="setDefault">
+        UPDATE llm_provider_config
+        SET is_default = TRUE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="resetAllDefaultEmbedding">
+        UPDATE llm_provider_config
+        SET is_default_embedding = FALSE,
+            updated_at = CURRENT_TIMESTAMP
+    </update>
+
+    <update id="setDefaultEmbedding">
+        UPDATE llm_provider_config
+        SET is_default_embedding = TRUE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+</mapper>

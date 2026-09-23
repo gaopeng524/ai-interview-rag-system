@@ -1,0 +1,61 @@
+【第一章：JUC 锁体系与 AQS 深度解密】
+AbstractQueuedSynchronizer (AQS) 是 Java 并发包（java.util.concurrent）的核心抽象同步框架。
+1. 同步状态机制：AQS 底层维护一个由 volatile 修饰的 int 类型的 state 同步状态变量。所有对 state 变量的修改都必须通过 Unsafe 类提供的硬件级 CAS (Compare-And-Swap) 原子操作来完成，以保证并发安全。在独占锁 ReentrantLock 中，state=0 表示当前锁处于空闲未锁定状态，state>0 表示当前锁已被某个线程持有，且 state 的数值严格等于当前持有线程对该锁的重入次数。在共享模式（如 Semaphore 信号量或 CountDownLatch 倒计时门闩）中，state 的值代表当前剩余可用的资源许可数量或剩余需倒计时的线程数。
+2. 双向同步等待队列：当多个线程并发竞争锁失败时，AQS 会将当前抢锁失败的线程封装为一个 Node 节点，通过 CAS 自旋操作原子性地追加加入到底层维护的 CLH 变体双向 FIFO 同步等待队列的尾部（Tail）。随后，该线程会在 acquireQueued 自旋逻辑中检查前驱节点状态，并通过 LockSupport.park() 系统调用将自身线程挂起进入 WAITING 阻塞状态，彻底让出 CPU 调度权。
+3. 锁释放与唤醒机制：当持有锁的线程执行 unlock 释放锁流程时，线程首先调用 tryRelease 将 state 归零；随后由队列头节点 Head 负责调用 unparkSuccessor 方法，从头节点开始向后遍历，找到等待队列中首个处于有效等待状态（waitStatus 不为 CANCELLED）的后继 Node 节点，并通过 LockSupport.unpark(thread) 将其唤醒。被唤醒的线程将从之前挂起处苏醒，并在自旋中重新尝试通过 CAS 竞争抢占 state。
+4. 条件等待队列：AQS 内部还支持基于 ConditionObject 实现的单向条件等待队列。当线程调用 condition.await() 时，会释放当前持有的锁并将自身加入条件等待队列尾部挂起；当其他线程调用 condition.signal() 时，会将条件队列头部的有效节点转移至 AQS 的双向同步等待队列尾部，等待重新竞争锁。
+
+【第二章：高并发 Redis 缓存体系三大问题实战治理与高可用架构】
+在高并发互联网架构中，Redis 缓存层承担着抗击 90% 以上海量读流量的核心重任。
+1. 缓存雪崩 (Cache Avalanche) 深度治理：缓存雪崩是指由于大量缓存 Key 在同一时刻大面积集中过期失效，或者 Redis 单点集群宕机，导致海量瞬时并发请求在毫秒级内全部直接穿透至后端 MySQL 数据库，瞬间压垮数据库连接池引发全链路崩溃。工业级实战治理策略包括：
+   - 过期时间抖动算法 (TTL Jitter)：在业务基础过期时间之上强制叠加一个随机扰动偏移值（例如 `base_ttl + random(300, 600) 秒`），使各个 Key 的过期时间在时间轴上均匀离散分布，彻底杜绝集体失效；
+   - 构建多级缓存架构：在应用层引入 Caffeine 本地二级堆内缓存建立前置防线。热点数据优先由本地 Caffeine 毫秒级拦截，大幅降低对远程 Redis 集群的网络调用开销；
+   - 依赖熔断与服务降级：在网关层集成 Sentinel 限流组件，当检测到底层 MySQL 慢查询比例超标或连接池耗尽时，立刻对非核心业务触发熔断降级，返回兜底静态默认数据。
+2. 缓存击穿 (Cache Breakdown) 深度治理：缓存击穿是指某单一具有超高并发读请求的 HotKey（如爆款秒杀单品、突发热搜新闻）在特定时间点突然过期失效，导致海量并发请求在极短时间内直接冲向数据库。工业级实战治理策略包括：
+   - Redisson 分布式互斥锁 (Mutex Lock)：当查询缓存发现 Key 不存在时，通过 Redisson 获取细粒度分布式互斥锁。仅放行拿到锁的单个线程去查询数据库并回填缓存，其余未竞争到锁的线程自旋休眠重试，杜绝并发并发打垮数据库；
+   - 物理永不过期与逻辑过期：在 Redis 中不对 HotKey 设置真实的物理 TTL，而是在 JSON 数据结构内部嵌套一个逻辑过期时间字段（expire_time）。后台常驻监控线程池定期异步拉取并刷新缓存数据，业务请求始终秒级读取旧快照，做到零等待与零阻塞。
+3. 缓存穿透 (Cache Penetration) 深度治理：缓存穿透是指客户端持续高频查询一个在 Redis 缓存和后端 MySQL 数据库中均根本不存在的非法 Key（如恶意黑客发起的负数 ID 遍历攻击）。工业级治理策略包括：
+   - 缓存空值 (Cache Null Value)：当数据库查询返回 null 时，依然向 Redis 写入一个空值标记（如 `"NULL"`），并设置 30~60 秒的极短过期时间，防止相同非法请求反复穿透；
+   - 布隆过滤器 (Bloom Filter)：在 API 网关入口层部署布隆过滤器，利用多个无偏哈希函数将数据库全量合法 Key 映射为 BitMap 位图。对于未命中的非法 Key 直接在网关层以 O(k) 极速时间复杂度拦截拦截拒绝。
+4. 哨兵集群脑裂 (Split-Brain) 防范：在 Redis Sentinel 架构中，当发生网络分区导致出现两个 Master 时，需在配置文件中严格设置 `min-slaves-to-write 1` 和 `min-slaves-max-lag 10`，强制要求 Master 必须至少与 1 个从节点保持健康心跳通信方可写入，否则拒绝客户端写请求，彻底杜绝脑裂数据丢失。
+
+【第三章：MySQL InnoDB MVCC 多版本并发控制与锁机制底层】
+MySQL InnoDB 存储引擎依托 MVCC（Multi-Version Concurrency Control）机制，在保证高并发读写性能的同时实现了事务的隔离性。
+1. Undo Log 版本链与隐藏字段：InnoDB 为聚簇索引每行记录默认隐藏维护三个核心字段：
+   - DB_TRX_ID：最近一次插入或修改该行记录的事务全局 ID；
+   - DB_ROLL_PTR：回滚指针，指向该行记录在 Undo Log 中的前一个历史版本快照，从而形成一条单向历史版本链；
+   - DB_ROW_ID：行标识（当表未显式定义主键时自动生成）。
+2. ReadView 一致性快照读判定规则：ReadView 是快照读（普通的 SELECT 语句）执行时生成的事务可见性视图，核心包含四个属性：m_ids（当前活跃且未提交的事务 ID 列表）、min_trx_id（活跃事务中最小的 ID）、max_trx_id（系统预分配的下一个事务 ID）、creator_trx_id（生成该 ReadView 的当前事务 ID）。
+   - RC (Read Committed 读已提交) 隔离级别：同一个事务中的每一次执行 SELECT 查询，都会无条件重新生成一个最新的 ReadView，因此能读到其他事务最新提交的数据，但也因此存在不可重复读问题；
+   - RR (Repeatable Read 可重复读) 隔离级别：同一个事务仅在第一次执行 SELECT 时生成唯一的 ReadView，后续所有的 SELECT 查询全程复用该首次生成的 ReadView，因此即使其他事务在后续提交了修改，当前事务看到的依然是第一次查询时刻的数据快照，彻底根治了不可重复读问题。
+3. 幻读治理与 Next-Key Lock 锁体系：幻读是指在同一个事务中连续执行两次相同的范围查询，第二次查询看到了第一次未看到的“新插入幻影行”。InnoDB 区分两种读取模式治理幻读：
+   - 快照读模式 (Snapshot Read)：在 RR 隔离级别下，依托全局复用首次生成的 ReadView，天然避免了快照读场景下的幻读；
+   - 当前读模式 (Current Read, 如 SELECT ... FOR UPDATE 或 UPDATE / DELETE)：依靠 Next-Key Lock 物理锁机制。Next-Key Lock 是行记录锁（Record Lock）与间隙锁（Gap Lock）的组合，它不仅锁定匹配的行记录本身，还会将记录之间的前后左开右闭区间间隙严密锁定，彻底杜绝其他并发事务在间隙中执行 INSERT 操作，从而从根本上消除了当前读下的幻读。
+
+【第四章：JVM 垃圾回收器 G1 与 ZGC 核心架构演进】
+现代 JVM 垃圾回收器致力于在超大堆内存下实现极致的吞吐量与极低的 STW（Stop-The-World）停顿时间。
+1. G1 收集器 (Garbage-First) 架构体系：G1 彻底摒弃了传统物理连续的年轻代与老年代堆内存划分，转而采用基于 Region 的离散网格化布局，将整个堆等分为约 2048 个大小在 1MB~32MB 之间的 Region。
+   - 卡表 (Card Table) 与记忆集 (Remembered Set / RSet)：G1 为每个 Region 维护专属的 RSet，记录其他 Region 对本 Region 对象的跨区引用。在执行 Young GC 时，垃圾收集器只需扫描当前存活区及对应的 RSet，无需对整个庞大的老年代执行耗时的全堆扫描，极大压缩了 STW 停顿；
+   - SATB (Snapshot-At-The-Beginning) 与写屏障 (Write Barrier)：G1 在并发标记阶段通过 SATB 算法配合写屏障技术，记录并发标记期间被应用程序修改删除的引用关系，并在重新标记阶段进行精准修正，有效规避对象漏标问题。
+2. ZGC 收集器 (Z Garbage Collector) 超低延迟架构：ZGC 是一款面向 TB 级别超大堆内存、停顿时间稳定控制在 1 毫秒以内的革命性垃圾回收器。
+   - 染色指针 (Colored Pointers)：ZGC 直接利用 64 位虚拟内存指针的高位 4 个元数据标志位（Marked0、Marked1、Remapped、Finalizable）记录对象的垃圾回收状态与自愈标记，使得 GC 状态与对象头完全解耦；
+   - 读屏障 (Load Barrier) 与并发重定位 (Concurrent Relocation)：当 Java 应用程序线程从堆中读取对象引用时，若发现指针指向的对象处于重定位转移区且未完成修正，读屏障会在毫秒级内自动触发指针自愈修正并更新当前指针，从而实现了垃圾回收全阶段（包括并发标记、并发预备、并发重定位整理）的真并发执行，彻底消除了大堆内存整理带来的长时间 STW。
+
+【第五章：Spring 框架底层核心三级缓存与 AOP 事务失效治理】
+Spring 容器在 Bean 生命周期管理与声明式事务处理上具备精妙的底层设计。
+1. 三级缓存循环依赖解决机制：Spring 仅支持在单例 (Singleton) 作用域下基于 setter 属性注入的循环依赖。底层依赖三级缓存协同工作：
+   - 一级缓存 singletonObjects：存放完全初始化完毕、属性已填充就绪的最终成熟 Bean；
+   - 二级缓存 earlySingletonObjects：存放已实例化完成但尚未进行属性填充与初始化的原始早期 Bean（或提前生成的 AOP 动态代理 Bean）；
+   - 三级缓存 singletonFactories：存放封装了 ObjectFactory 的函数式工厂。当 Bean 存在循环依赖且被 AOP 切面修饰时，第三方在注入时会触发工厂的 getEarlyBeanReference 方法，提前生成动态代理对象并将其升入二级缓存，确保整个 Spring 容器中代理对象全局唯一。
+2. 声明式事务 @Transactional 失效四大高频实战陷阱：
+   - 同类内部 this 自调用陷阱：同一个类内部没有事务注解的方法调用带有 @Transactional 的方法时，直接走的是目标对象的 this 本地指针，绕过了 Spring 的 CGLIB/JDK 动态代理切面，导致事务拦截器无法生效。标准解法为通过 ApplicationContext 显式获取代理对象或注入自身代理引用；
+   - 修饰非 public 方法：Spring AOP 事务拦截器基于 TransactionAttributeSource 机制，默认在解析方法修饰符时会主动忽略非 public 方法，导致事务注解静默失效；
+   - 业务代码显式捕获吞噬异常：在事务方法内部通过 try-catch 块捕获了业务异常且未再次抛出，导致 AOP 事务切面无法感知异常，误以为业务成功执行，最终造成事务自动提交；
+   - 异常类型不匹配：@Transactional 默认仅在抛出 RuntimeException 或 Error 时触发回滚，若业务抛出 Checked Exception（如 IOException 或自定义 Exception）且未显式指定 `rollbackFor = Exception.class`，事务将不会发生回滚。
+
+【第六章：微服务分布式事务 Seata AT 与 Sentinel 流量治理】
+在分布式微服务架构中，数据一致性与服务高可用是系统稳定的双翼。
+1. Seata AT 模式两阶段提交无侵入架构：
+   - 一阶段业务执行与前置/后置镜像解析：在执行业务 SQL 前，Seata 自动解析 SQL 并查询出受影响记录在修改前的“前镜像 (Before Image)”；随后执行业务 SQL 并查询出修改后的“后镜像 (After Image)”。最后，将前后镜像与业务数据打包生成一条 Undo Log 记录，并向 TC（事务协调器）申请全局行锁后，在同一个本地事务中一并提交；
+   - 二阶段提交与异步回滚：若分布式全局事务执行成功，TC 通知分支事务异步极速删除对应的 Undo Log 记录，极大降低事务锁定时间；若全局事务失败触发回滚，分支事务利用 Undo Log 中保存的前镜像数据自动生成反向补偿 SQL 并执行，将数据精准还原至初始状态。
+2. Sentinel 滑动时间窗口与熔断限流：Sentinel 底层采用高效的滑动时间窗口（Sliding Window）算法统计实时 QPS、慢调用比例与异常率。支持基于令牌桶算法（Token Bucket）实现秒级平滑排队限流，以及基于漏桶算法（Leaky Bucket）实现整流平滑出流。当接口的慢调用比例超过预设阈值时，自动触发熔断降级进入 Open 状态，并在经过熔断时长后进入 Half-Open 状态探测恢复，严格保护下游微服务不被洪峰流量击垮。

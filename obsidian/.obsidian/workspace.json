@@ -1,0 +1,208 @@
+{
+  "main": {
+    "id": "300d69d07c579140",
+    "type": "split",
+    "children": [
+      {
+        "id": "8a6709f602824cc3",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a27626ff5ddb65b7",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "14-复现路线图.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "14-复现路线图"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "671666ed4629ed9f",
+    "type": "split",
+    "children": [
+      {
+        "id": "bbfebab2360e888c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2239ce6d5bb5dfa1",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "726984b15ada28fe",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "搜索"
+            }
+          },
+          {
+            "id": "54ce372bc88d8879",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "书签"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "fc0c23c904371037",
+    "type": "split",
+    "children": [
+      {
+        "id": "010dd3607eb4b6f7",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e50962f2ab6b89cc",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "反向链接"
+            }
+          },
+          {
+            "id": "492732fc39187fa4",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "出链"
+            }
+          },
+          {
+            "id": "e5ea94d926757fc5",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "标签"
+            }
+          },
+          {
+            "id": "df2fec9fe29f7670",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "添加笔记属性"
+            }
+          },
+          {
+            "id": "a92b4d0834d6d10c",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "大纲"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "bases:新建数据库": false
+    }
+  },
+  "active": "a27626ff5ddb65b7",
+  "lastOpenFiles": [
+    "13-interview-guide框架蓝图.md",
+    "12-坑与排查.md",
+    "14-复现路线图.md",
+    "14-复现路线图.md.tmp.11584.6eb06c45b0e5",
+    "13-interview-guide框架蓝图.md.tmp.11584.e5e314230e4e",
+    "11-测试.md",
+    "10-前端.md",
+    "09-函数调用与工具.md",
+    "08-异常处理.md",
+    "07-数据访问层.md",
+    "06-Chat编排与记忆.md",
+    "05-Chat核心-流式与重试.md",
+    "04-Service层-用户与会话.md",
+    "03-Controller层.md",
+    "02-安全与JWT.md",
+    "01-启动与配置.md",
+    "00-项目总览.md"
+  ]
+}

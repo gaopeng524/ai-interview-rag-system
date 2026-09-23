@@ -1,0 +1,66 @@
+# ==========================================
+# 🛡️ 敏感配置文件（严禁提交到远程仓库防泄密）
+# ==========================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ==========================================
+# ☕ Java & Maven 构建产物
+# ==========================================
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# ==========================================
+# ⚛️ 前端 Node.js & Vite 构建产物
+# ==========================================
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.pnpm-store/
+*.local
+
+# ==========================================
+# 💻 IDE & 编辑器临时文件
+# ==========================================
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+bin/
+
+# ==========================================
+# 📝 系统运行日志与临时数据
+# ==========================================
+*.log
+logs/
+temp/
+tmp/
+.temp/
+
+# ==========================================
+# 🖥️ 操作系统垃圾文件
+# ==========================================
+.DS_Store
+Thumbs.db
+Desktop.ini

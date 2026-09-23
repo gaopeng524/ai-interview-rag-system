@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.modules.resume.mapper.ResumeMapper">
+
+    <!-- ========== 简历基础表操作 ========== -->
+
+    <insert id="insertResume" parameterType="com.example.demo.modules.resume.model.entity.ResumeEntity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO resumes (
+            user_id, filename, file_size, file_hash, content_type,
+            resume_text, analyze_status, analyze_error, latest_score,
+            access_count, interview_count, created_at, updated_at
+        ) VALUES (
+            #{userId}, #{filename}, #{fileSize}, #{fileHash}, #{contentType},
+            #{resumeText}, #{analyzeStatus}, #{analyzeError}, #{latestScore},
+            COALESCE(#{accessCount}, 0), COALESCE(#{interviewCount}, 0),
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateResume" parameterType="com.example.demo.modules.resume.model.entity.ResumeEntity">
+        UPDATE resumes
+        SET filename = #{filename},
+            file_size = #{fileSize},
+            file_hash = #{fileHash},
+            content_type = #{contentType},
+            resume_text = #{resumeText},
+            analyze_status = #{analyzeStatus},
+            analyze_error = #{analyzeError},
+            latest_score = #{latestScore},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateResumeAnalysisResult">
+        UPDATE resumes
+        SET analyze_status = #{analyzeStatus},
+            analyze_error = #{analyzeError},
+            latest_score = #{latestScore},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="incrementAccessCount">
+        UPDATE resumes
+        SET access_count = access_count + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="incrementInterviewCount">
+        UPDATE resumes
+        SET interview_count = interview_count + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="findResumeById" resultType="com.example.demo.modules.resume.model.entity.ResumeEntity">
+        SELECT id, user_id as userId, filename, file_size as fileSize,
+               file_hash as fileHash, content_type as contentType,
+               resume_text as resumeText, analyze_status as analyzeStatus,
+               analyze_error as analyzeError, latest_score as latestScore,
+               access_count as accessCount, interview_count as interviewCount,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM resumes
+        WHERE id = #{id}
+    </select>
+
+    <select id="findResumeByHash" resultType="com.example.demo.modules.resume.model.entity.ResumeEntity">
+        SELECT id, user_id as userId, filename, file_size as fileSize,
+               file_hash as fileHash, content_type as contentType,
+               resume_text as resumeText, analyze_status as analyzeStatus,
+               analyze_error as analyzeError, latest_score as latestScore,
+               access_count as accessCount, interview_count as interviewCount,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM resumes
+        WHERE user_id = #{userId} AND file_hash = #{fileHash}
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findResumesByUserId" resultType="com.example.demo.modules.resume.model.entity.ResumeEntity">
+        SELECT id, user_id as userId, filename, file_size as fileSize,
+               file_hash as fileHash, content_type as contentType,
+               resume_text as resumeText, analyze_status as analyzeStatus,
+               analyze_error as analyzeError, latest_score as latestScore,
+               access_count as accessCount, interview_count as interviewCount,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM resumes
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <delete id="deleteResumeById">
+        DELETE FROM resumes
+        WHERE id = #{id} AND user_id = #{userId}
+    </delete>
+
+    <!-- ========== 简历分析历史报告表操作 ========== -->
+
+    <insert id="insertAnalysis" parameterType="com.example.demo.modules.resume.model.entity.ResumeAnalysisEntity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO resume_analyses (
+            resume_id, overall_score, content_score, structure_score,
+            skill_match_score, expression_score, project_score,
+            summary, strengths, suggestions, created_at
+        ) VALUES (
+            #{resumeId}, #{overallScore}, #{contentScore}, #{structureScore},
+            #{skillMatchScore}, #{expressionScore}, #{projectScore},
+            #{summary}, #{strengths}, #{suggestions}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="findAnalysesByResumeId" resultType="com.example.demo.modules.resume.model.entity.ResumeAnalysisEntity">
+        SELECT id, resume_id as resumeId, overall_score as overallScore,
+               content_score as contentScore, structure_score as structureScore,
+               skill_match_score as skillMatchScore, expression_score as expressionScore,
+               project_score as projectScore, summary, strengths, suggestions,
+               created_at::timestamp as createdAt
+        FROM resume_analyses
+        WHERE resume_id = #{resumeId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findLatestAnalysisByResumeId" resultType="com.example.demo.modules.resume.model.entity.ResumeAnalysisEntity">
+        SELECT id, resume_id as resumeId, overall_score as overallScore,
+               content_score as contentScore, structure_score as structureScore,
+               skill_match_score as skillMatchScore, expression_score as expressionScore,
+               project_score as projectScore, summary, strengths, suggestions,
+               created_at::timestamp as createdAt
+        FROM resume_analyses
+        WHERE resume_id = #{resumeId}
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+    <delete id="deleteAnalysesByResumeId">
+        DELETE FROM resume_analyses
+        WHERE resume_id = #{resumeId}
+    </delete>
+
+</mapper>

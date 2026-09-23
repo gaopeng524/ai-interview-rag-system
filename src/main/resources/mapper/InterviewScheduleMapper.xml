@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.modules.interviewschedule.mapper.InterviewScheduleMapper">
+
+    <insert id="insertSchedule" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO interview_schedules (
+            user_id, company_name, position, interview_time, interview_type,
+            meeting_link, round_number, interviewer, notes, status, created_at, updated_at
+        ) VALUES (
+            #{userId}, #{companyName}, #{position}, #{interviewTime}, #{interviewType},
+            #{meetingLink}, #{roundNumber}, #{interviewer}, #{notes}, #{status},
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateSchedule">
+        UPDATE interview_schedules
+        SET company_name = #{companyName},
+            position = #{position},
+            interview_time = #{interviewTime},
+            interview_type = #{interviewType},
+            meeting_link = #{meetingLink},
+            round_number = #{roundNumber},
+            interviewer = #{interviewer},
+            notes = #{notes},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND (user_id = #{userId} OR #{userId} IS NULL)
+    </update>
+
+    <update id="updateStatus">
+        UPDATE interview_schedules
+        SET status = #{status},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND (user_id = #{userId} OR #{userId} IS NULL)
+    </update>
+
+    <delete id="deleteScheduleById">
+        DELETE FROM interview_schedules
+        WHERE id = #{id}
+          AND (user_id = #{userId} OR #{userId} IS NULL)
+    </delete>
+
+    <select id="findScheduleById" resultType="com.example.demo.modules.interviewschedule.model.entity.InterviewScheduleEntity">
+        SELECT id, user_id as userId, company_name as companyName, position,
+               interview_time::timestamp as interviewTime, interview_type as interviewType,
+               meeting_link as meetingLink, round_number as roundNumber,
+               interviewer, notes, status,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM interview_schedules
+        WHERE id = #{id}
+          AND (user_id = #{userId} OR #{userId} IS NULL)
+    </select>
+
+    <select id="findSchedules" resultType="com.example.demo.modules.interviewschedule.model.entity.InterviewScheduleEntity">
+        SELECT id, user_id as userId, company_name as companyName, position,
+               interview_time::timestamp as interviewTime, interview_type as interviewType,
+               meeting_link as meetingLink, round_number as roundNumber,
+               interviewer, notes, status,
+               created_at::timestamp as createdAt, updated_at::timestamp as updatedAt
+        FROM interview_schedules
+        WHERE (user_id = #{userId} OR #{userId} IS NULL)
+          <if test="status != null and status != ''">
+              AND status = #{status}
+          </if>
+          <if test="start != null">
+              AND interview_time &gt;= #{start}
+          </if>
+          <if test="end != null">
+              AND interview_time &lt;= #{end}
+          </if>
+        ORDER BY interview_time ASC
+    </select>
+
+    <update id="updateExpiredStatus">
+        UPDATE interview_schedules
+        SET status = #{newStatus},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE status = #{targetStatus}
+          AND interview_time &lt; #{now}
+    </update>
+
+</mapper>

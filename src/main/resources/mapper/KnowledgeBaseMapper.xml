@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.modules.knowledgebase.mapper.KnowledgeBaseMapper">
+
+    <!-- 创建知识库表 -->
+    <update id="createTable">
+        CREATE TABLE IF NOT EXISTS knowledge_bases (
+            id BIGSERIAL PRIMARY KEY,
+            name VARCHAR(200) NOT NULL,
+            original_filename VARCHAR(500),
+            file_size BIGINT,
+            content_type VARCHAR(100),
+            file_hash VARCHAR(64),
+            category VARCHAR(100),
+            vector_status VARCHAR(20) DEFAULT 'PENDING',
+            vector_error VARCHAR(500),
+            chunk_count INTEGER DEFAULT 0,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    </update>
+
+    <!-- 插入知识库 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO knowledge_bases (name, original_filename, file_size, content_type, file_hash, category, vector_status)
+        VALUES (#{name}, #{originalFilename}, #{fileSize}, #{contentType}, #{fileHash}, #{category}, #{vectorStatus})
+    </insert>
+
+    <!-- 根据ID查询 -->
+    <select id="findById" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
+        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
+               content_type as contentType, file_hash as fileHash, category,
+               vector_status as vectorStatus, vector_error as vectorError,
+               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
+        FROM knowledge_bases WHERE id = #{id}
+    </select>
+
+    <!-- 根据ID列表查询 -->
+    <select id="findByIds" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
+        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
+               content_type as contentType, file_hash as fileHash, category,
+               vector_status as vectorStatus, vector_error as vectorError,
+               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
+        FROM knowledge_bases
+        WHERE id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY uploaded_at DESC
+    </select>
+
+    <!-- 查询所有知识库 -->
+    <select id="findAll" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
+        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
+               content_type as contentType, file_hash as fileHash, category,
+               vector_status as vectorStatus, vector_error as vectorError,
+               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
+        FROM knowledge_bases ORDER BY uploaded_at DESC
+    </select>
+
+    <!-- 根据文件哈希查询 -->
+    <select id="findByFileHash" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
+        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
+               content_type as contentType, file_hash as fileHash, category,
+               vector_status as vectorStatus, vector_error as vectorError,
+               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
+        FROM knowledge_bases WHERE file_hash = #{fileHash}
+    </select>
+
+    <!-- 按名称搜索知识库 -->
+    <select id="searchByName" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
+        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
+               content_type as contentType, file_hash as fileHash, category,
+               vector_status as vectorStatus, vector_error as vectorError,
+               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
+        FROM knowledge_bases
+        WHERE name ILIKE '%' || #{keyword} || '%'
+        ORDER BY uploaded_at DESC
+    </select>
+
+    <!-- 获取所有分类 -->
+    <select id="findAllCategories" resultType="java.lang.String">
+        SELECT DISTINCT category FROM knowledge_bases
+        WHERE category IS NOT NULL AND category != ''
+        ORDER BY category
+    </select>
+
+    <!-- 获取总数 -->
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM knowledge_bases
+    </select>
+
+    <!-- 按状态统计 -->
+    <select id="countByVectorStatus" resultType="int">
+        SELECT COUNT(*) FROM knowledge_bases WHERE vector_status = #{status}
+    </select>
+
+    <!-- 更新向量化状态 -->
+    <update id="updateVectorStatus">
+        UPDATE knowledge_bases
+        SET vector_status = #{vectorStatus},
+            vector_error = #{vectorError},
+            chunk_count = #{chunkCount},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除知识库 -->
+    <delete id="deleteById">
+        DELETE FROM knowledge_bases WHERE id = #{id}
+    </delete>
+
+</mapper>

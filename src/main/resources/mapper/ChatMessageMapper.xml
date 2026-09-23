@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.modules.chat.mapper.ChatMessageMapper">
+
+    <insert id="insert"
+            parameterType="com.example.demo.modules.chat.model.entity.ChatMessage"
+            useGeneratedKeys="true"
+            keyProperty="id">
+
+        INSERT INTO chat_messages (
+        session_id,
+        role,
+        content
+        )
+        VALUES (
+        #{sessionId},
+        #{role},
+        #{content}
+        )
+
+    </insert>
+    <select id="findBySessionId"
+            resultType="com.example.demo.modules.chat.model.entity.ChatMessage">
+
+        SELECT
+        id,
+        session_id,
+        role,
+        content,
+        created_at
+        FROM chat_messages
+        WHERE session_id = #{sessionId}
+        ORDER BY created_at ASC
+
+    </select>
+    <delete id="deleteBySessionId">
+
+        DELETE FROM chat_messages
+        WHERE session_id = #{sessionId}
+
+    </delete>
+
+    <select id="findRecentBySessionId"
+            resultType="com.example.demo.modules.chat.model.entity.ChatMessage">
+
+        SELECT
+        id,
+        session_id,
+        role,
+        content,
+        created_at
+        FROM chat_messages
+        WHERE session_id = #{sessionId}
+        ORDER BY created_at DESC
+        LIMIT #{limit}
+
+    </select>
+
+</mapper>

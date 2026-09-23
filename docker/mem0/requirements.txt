@@ -1,0 +1,7 @@
+﻿fastapi>=0.110.0
+uvicorn>=0.28.0
+mem0ai>=0.1.30
+psycopg2-binary>=2.9.9
+pgvector>=0.2.5
+openai>=1.14.0
+pydantic>=2.6.0
