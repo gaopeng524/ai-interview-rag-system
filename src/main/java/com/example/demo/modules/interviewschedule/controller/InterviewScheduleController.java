@@ -1,6 +1,7 @@
 package com.example.demo.modules.interviewschedule.controller;
 
 import com.example.demo.common.result.Result;
+import com.example.demo.common.security.CurrentUser;
 import com.example.demo.common.security.UserPrincipal;
 import com.example.demo.modules.interviewschedule.model.dto.CreateInterviewRequest;
 import com.example.demo.modules.interviewschedule.model.dto.InterviewScheduleDTO;
@@ -50,7 +51,7 @@ public class InterviewScheduleController {
     public Result<InterviewScheduleDTO> create(
             @Valid @RequestBody CreateInterviewRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         InterviewScheduleDTO dto = scheduleService.create(request, userId);
         return Result.success(dto);
     }
@@ -63,7 +64,7 @@ public class InterviewScheduleController {
     public Result<InterviewScheduleDTO> getById(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         InterviewScheduleDTO dto = scheduleService.getById(id, userId);
         return Result.success(dto);
     }
@@ -78,7 +79,7 @@ public class InterviewScheduleController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         List<InterviewScheduleDTO> list = scheduleService.getAll(status, start, end, userId);
         return Result.success(list);
     }
@@ -92,7 +93,7 @@ public class InterviewScheduleController {
             @PathVariable Long id,
             @Valid @RequestBody CreateInterviewRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         InterviewScheduleDTO dto = scheduleService.update(id, request, userId);
         return Result.success(dto);
     }
@@ -105,7 +106,7 @@ public class InterviewScheduleController {
     public Result<Void> delete(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         scheduleService.delete(id, userId);
         return Result.success(null);
     }
@@ -119,7 +120,7 @@ public class InterviewScheduleController {
             @PathVariable Long id,
             @RequestParam InterviewStatus status,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         InterviewScheduleDTO dto = scheduleService.updateStatus(id, status, userId);
         return Result.success(dto);
     }

@@ -3,6 +3,7 @@ package com.example.demo.modules.interview.controller;
 import com.example.demo.common.annotation.RateLimit;
 import com.example.demo.modules.interview.model.dto.InterviewDTO.*;
 import com.example.demo.common.result.Result;
+import com.example.demo.common.security.CurrentUser;
 import com.example.demo.common.security.UserPrincipal;
 import com.example.demo.modules.interview.service.InterviewService;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,7 @@ public class InterviewController {
      */
     @GetMapping("/api/interview/sessions")
     public Result<List<SessionListItemDTO>> listSessions(@AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(interviewService.listSessions(userId));
     }
 
@@ -44,7 +45,7 @@ public class InterviewController {
     public Result<InterviewSessionDTO> createSession(
             @RequestBody CreateInterviewRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(interviewService.createSession(userId, request));
     }
 
@@ -56,7 +57,7 @@ public class InterviewController {
     public Result<InterviewSessionDTO> getSession(
             @PathVariable String sessionId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(interviewService.getSession(sessionId, userId));
     }
 
@@ -68,7 +69,7 @@ public class InterviewController {
     public Result<CurrentQuestionResponse> getCurrentQuestion(
             @PathVariable String sessionId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(interviewService.getCurrentQuestion(sessionId, userId));
     }
 
@@ -82,7 +83,7 @@ public class InterviewController {
             @PathVariable String sessionId,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         Integer questionIndex = body.get("questionIndex") instanceof Number n ? n.intValue() : null;
         String answer = body.get("answer") != null ? body.get("answer").toString() : "";
         SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer);
@@ -98,7 +99,7 @@ public class InterviewController {
             @PathVariable String sessionId,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         Integer questionIndex = body.get("questionIndex") instanceof Number n ? n.intValue() : null;
         String answer = body.get("answer") != null ? body.get("answer").toString() : "";
         SubmitAnswerRequest request = new SubmitAnswerRequest(sessionId, questionIndex, answer);
@@ -114,7 +115,7 @@ public class InterviewController {
     public Result<Void> completeInterview(
             @PathVariable String sessionId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         interviewService.completeInterview(sessionId, userId);
         return Result.success(null);
     }
@@ -128,7 +129,7 @@ public class InterviewController {
     public Result<InterviewReportDTO> getReport(
             @PathVariable String sessionId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(interviewService.generateReport(sessionId, userId));
     }
 
@@ -140,7 +141,7 @@ public class InterviewController {
     public Result<InterviewDetailDTO> getInterviewDetails(
             @PathVariable String sessionId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(interviewService.getInterviewDetails(sessionId, userId));
     }
 
@@ -152,7 +153,7 @@ public class InterviewController {
     public org.springframework.http.ResponseEntity<byte[]> exportInterview(
             @PathVariable String sessionId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         byte[] content = interviewService.exportInterviewPdf(sessionId, userId);
         String filename = "interview-report-" + sessionId + ".md";
         return org.springframework.http.ResponseEntity.ok()
@@ -169,7 +170,7 @@ public class InterviewController {
     public Result<InterviewSessionDTO> findUnfinishedSession(
             @PathVariable Long resumeId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(interviewService.findUnfinishedSession(userId, resumeId));
     }
 
@@ -181,7 +182,7 @@ public class InterviewController {
     public Result<Void> deleteSession(
             @PathVariable String sessionId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         interviewService.deleteSession(sessionId, userId);
         return Result.success(null);
     }
@@ -195,7 +196,7 @@ public class InterviewController {
     public Result<InterviewSessionDTO> createKbInterviewSession(
             @RequestBody CreateInterviewRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(interviewService.createSession(userId, request));
     }
 

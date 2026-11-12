@@ -2,6 +2,7 @@ package com.example.demo.modules.resume.controller;
 
 import com.example.demo.common.annotation.RateLimit;
 import com.example.demo.common.result.Result;
+import com.example.demo.common.security.CurrentUser;
 import com.example.demo.common.security.UserPrincipal;
 import com.example.demo.modules.resume.model.dto.ResumeDTO.*;
 import com.example.demo.modules.resume.service.ResumeService;
@@ -38,7 +39,7 @@ public class ResumeController {
     public Result<UploadResponse> uploadAndAnalyze(
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         UploadResponse resp = resumeService.uploadAndAnalyze(file, userId);
         return Result.success(resp.message(), resp);
     }
@@ -49,7 +50,7 @@ public class ResumeController {
      */
     @GetMapping
     public Result<List<ResumeListItem>> getAllResumes(@AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(resumeService.getAllResumes(userId));
     }
 
@@ -61,7 +62,7 @@ public class ResumeController {
     public Result<ResumeDetailDTO> getResumeDetail(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(resumeService.getResumeDetail(id, userId));
     }
 
@@ -74,7 +75,7 @@ public class ResumeController {
     public Result<ResumeAnalysisResponse> reanalyze(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         return Result.success(resumeService.reanalyze(id, userId));
     }
 
@@ -86,7 +87,7 @@ public class ResumeController {
     public Result<Void> deleteResume(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         resumeService.deleteResume(id, userId);
         return Result.success(null);
     }
@@ -99,7 +100,7 @@ public class ResumeController {
     public ResponseEntity<byte[]> exportAnalysis(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Long userId = principal != null ? principal.id() : 1L;
+        Long userId = CurrentUser.requireId(principal);
         byte[] pdfBytes = resumeService.exportAnalysisPdf(id, userId);
         String filename = URLEncoder.encode("resume-analysis-report-" + id + ".pdf", StandardCharsets.UTF_8);
         return ResponseEntity.ok()

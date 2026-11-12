@@ -313,7 +313,10 @@ public class InterviewService {
         )).toList();
     }
 
+    @Transactional
     public void deleteSession(String sessionId, Long userId) {
+        // 先校验归属：以前这里直接按 sessionId 删题目，别人的会话题目会被误删
+        validateSessionOwner(sessionId, userId);
         interviewMapper.deleteQuestionsBySessionId(sessionId);
         interviewMapper.deleteSessionBySessionId(sessionId, userId);
     }
@@ -413,10 +416,17 @@ public class InterviewService {
 
     // ==================== 私有辅助 ====================
 
-    private InterviewSessionEntity validateSessionOwner(String sessionId, Long userId) {
+    /**
+     * 面试会话归属校验（按 sessionId 访问会话的所有入口都必须经过这里）。
+     * userId 为空直接 403；会话无归属人或归属人不是当前用户也是 403。
+     */
+    InterviewSessionEntity validateSessionOwner(String sessionId, Long userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权访问该面试会话");
+        }
         InterviewSessionEntity session = interviewMapper.findSessionBySessionId(sessionId);
         if (session == null) throw new BusinessException(ErrorCode.NOT_FOUND, "面试会话不存在");
-        if (userId != null && session.getUserId() != null && !session.getUserId().equals(userId)) {
+        if (!userId.equals(session.getUserId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "无权访问该面试会话");
         }
         return session;

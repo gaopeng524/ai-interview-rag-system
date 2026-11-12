@@ -52,7 +52,10 @@ public class SecurityConfig {
                                 "/users",
                                 "/users/login"
                         ).permitAll()
-                        .requestMatchers("/api/interview/skills/**", "/api/resumes/**", "/api/voice-interview/**").permitAll()
+                        // ③ 面试方向/技能目录是公开的静态元数据，允许匿名浏览。
+                        //    简历（/api/resumes/**）、语音面试（/api/voice-interview/**）涉及用户私有数据，
+                        //    必须登录，交给下面的 anyRequest().authenticated() 处理。
+                        .requestMatchers(HttpMethod.GET, "/api/interview/skills", "/api/interview/skills/**").permitAll()
                         .anyRequest().authenticated()
                 )
 

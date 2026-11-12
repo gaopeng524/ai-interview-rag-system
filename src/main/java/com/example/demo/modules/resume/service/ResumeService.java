@@ -203,22 +203,32 @@ public class ResumeService {
      */
     public String getResumeTextAndIncrementInterviewCount(Long resumeId, Long userId) {
         if (resumeId == null) return "";
-        ResumeEntity resume = resumeMapper.findResumeById(resumeId);
-        if (resume != null) {
-            resumeMapper.incrementInterviewCount(resumeId);
-            return resume.getResumeText() != null ? resume.getResumeText() : "";
-        }
-        return "";
+        // 必须做归属校验：否则用别人的 resumeId 建面试，就能把别人的简历全文读进自己的会话
+        ResumeEntity resume = validateResumeOwner(resumeId, userId);
+        resumeMapper.incrementInterviewCount(resumeId);
+        return resume.getResumeText() != null ? resume.getResumeText() : "";
     }
 
     // ==================== 私有辅助 ====================
 
-    private ResumeEntity validateResumeOwner(Long id, Long userId) {
+    /**
+     * 简历归属校验（按 id 访问简历的所有入口都必须经过这里）。
+     * <ul>
+     *   <li>userId 为空：调用方没有登录身份，直接 403，不再"跳过校验"；</li>
+     *   <li>简历不存在：404；</li>
+     *   <li>简历没有归属人（历史脏数据）或归属人不是当前用户：403。</li>
+     * </ul>
+     * 先判 userId 再查库，避免匿名请求通过 404/403 的差异探测 id 是否存在。
+     */
+    ResumeEntity validateResumeOwner(Long id, Long userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权操作该简历");
+        }
         ResumeEntity resume = resumeMapper.findResumeById(id);
         if (resume == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "简历不存在");
         }
-        if (userId != null && resume.getUserId() != null && !resume.getUserId().equals(userId)) {
+        if (!userId.equals(resume.getUserId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "无权操作该简历");
         }
         return resume;
