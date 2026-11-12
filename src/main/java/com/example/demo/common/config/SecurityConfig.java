@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -14,6 +15,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 
 @Configuration
+// 开启方法级鉴权：Controller/Service 上的 @PreAuthorize("hasRole('ADMIN')") 才会生效
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -66,6 +69,14 @@ public class SecurityConfig {
                             response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write(
                                     "{\"code\":401,\"message\":\"未登录或登录已过期\"}"
+                            );
+                        })
+                        // 已登录但权限不足（如普通用户调用管理员接口）→ 403 JSON
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"code\":403,\"message\":\"权限不足\"}"
                             );
                         })
                 )

@@ -33,13 +33,21 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
+    /** JWT 中存放角色的 claim 名 */
+    public static final String CLAIM_ROLE = "role";
+
     public String generateToken(String username, Long userId) {
+        return generateToken(username, userId, Role.USER);
+    }
+
+    public String generateToken(String username, Long userId, Role role) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .subject(username)
                 .claim("userId", userId)
+                .claim(CLAIM_ROLE, (role != null ? role : Role.USER).name())
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)

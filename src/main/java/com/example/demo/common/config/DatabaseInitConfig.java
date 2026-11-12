@@ -19,6 +19,8 @@ public class DatabaseInitConfig {
     public CommandLineRunner initDatabase(KnowledgeBaseMapper knowledgeBaseMapper, JdbcTemplate jdbcTemplate) {
         return args -> {
             log.info("初始化数据库表...");
+            // 版本化迁移脚本（幂等）：按文件名顺序执行 classpath:db/migration/*.sql
+            runMigrations(jdbcTemplate);
             try {
                 knowledgeBaseMapper.createTable();
                 log.info("知识库表检查/创建成功");
@@ -252,5 +254,27 @@ public class DatabaseInitConfig {
                 log.error("初始化数据库结构失败: {}", e.getMessage(), e);
             }
         };
+    }
+
+    /**
+     * 执行 classpath:db/migration 下的 SQL 迁移脚本（按文件名排序）。
+     * 脚本必须写成幂等的（IF NOT EXISTS 等），因为每次启动都会执行。
+     * 整个文件作为一条语句交给 PostgreSQL（pgjdbc 支持多语句），以便脚本里使用 DO $$ ... $$ 块。
+     */
+    static void runMigrations(JdbcTemplate jdbcTemplate) {
+        try {
+            org.springframework.core.io.Resource[] scripts =
+                    new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
+                            .getResources("classpath:db/migration/*.sql");
+            java.util.Arrays.sort(scripts, java.util.Comparator.comparing(
+                    r -> java.util.Objects.requireNonNullElse(r.getFilename(), "")));
+            for (org.springframework.core.io.Resource script : scripts) {
+                String sql = script.getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+                jdbcTemplate.execute(sql);
+                log.info("数据库迁移脚本执行完成: {}", script.getFilename());
+            }
+        } catch (Exception e) {
+            log.error("数据库迁移脚本执行失败: {}", e.getMessage(), e);
+        }
     }
 }

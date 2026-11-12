@@ -248,6 +248,18 @@ public class GlobalExceptionHandler {
      * HTTP 状态码 500：没预料到的异常 = 服务端内部错误。
      * 堆栈详情是给开发者的，绝不能暴露给前端（信息泄露风险），响应只给一句"系统繁忙"。
      */
+    /**
+     * 方法级鉴权（@PreAuthorize）拒绝时抛 AuthorizationDeniedException（AccessDeniedException 子类）。
+     * 它在 Controller 方法调用时抛出，会先被 MVC 的 @ExceptionHandler 拦截；
+     * 如果不单独处理，就会落进下面的 Exception 兜底变成 500。这里明确返回 403。
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Result<Void>> handleAccessDenied(org.springframework.security.access.AccessDeniedException e) {
+        log.warn("权限不足: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Result.error(ErrorCode.FORBIDDEN, "权限不足"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleException(Exception e) {
         log.error("系统异常: {}", e.getMessage(), e);

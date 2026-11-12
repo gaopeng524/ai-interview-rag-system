@@ -6,14 +6,14 @@
 <mapper namespace="com.example.demo.modules.user.mapper.UserMapper">
 
     <select id="findAll" resultType="com.example.demo.modules.user.model.entity.User">
-        SELECT id, username, password
+        SELECT id, username, password, role
         FROM users
     </select>
 
     <select id="findById"
             parameterType="long"
             resultType="com.example.demo.modules.user.model.entity.User">
-        SELECT id, username, password
+        SELECT id, username, password, role
         FROM users
         WHERE id = #{id}
     </select>
@@ -21,7 +21,7 @@
             parameterType="string"
             resultType="com.example.demo.modules.user.model.entity.User">
 
-        SELECT id, username, password
+        SELECT id, username, password, role
         FROM users
         WHERE username = #{username}
 
@@ -32,8 +32,8 @@
             useGeneratedKeys="true"
             keyProperty="id">
 
-        INSERT INTO users (username, password)
-        VALUES (#{username}, #{password})
+        INSERT INTO users (username, password, role)
+        VALUES (#{username}, #{password}, #{role})
 
     </insert>
 

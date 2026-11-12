@@ -6,6 +6,7 @@ import com.example.demo.common.exception.BusinessException;
 import com.example.demo.common.exception.ErrorCode;
 import com.example.demo.modules.user.mapper.UserMapper;
 import com.example.demo.common.security.JwtService;
+import com.example.demo.common.security.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,6 +42,9 @@ public class UserService {
         // 1. 密码加密
         String encodedPassword = passwordEncoder.encode(user.getPassword());
         user.setPassword(encodedPassword);
+        // 注册接口直接绑定 User 实体，必须强制覆盖 role，防止请求体里塞 "role":"ADMIN" 自助提权。
+        // 管理员只能由 DBA 通过 SQL 授予（见 db/migration/V2__add_user_role.sql 注释）。
+        user.setRole(Role.USER.name());
 
         // 2. 保存数据库
         userMapper.insert(user);
@@ -61,7 +65,7 @@ public class UserService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
 
-        return jwtService.generateToken(user.getUsername(), user.getId());
+        return jwtService.generateToken(user.getUsername(), user.getId(), Role.fromNullable(user.getRole()));
     }
 
     /** User 实体 → 脱敏 DTO：只暴露 id 和 username，永远不带 password。 */

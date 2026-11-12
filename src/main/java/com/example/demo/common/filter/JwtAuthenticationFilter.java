@@ -1,5 +1,6 @@
 package com.example.demo.common.filter;
 
+import com.example.demo.common.security.Role;
 import com.example.demo.common.security.UserPrincipal;
 import com.example.demo.common.security.JwtService;
 import io.jsonwebtoken.Claims;
@@ -8,6 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -49,9 +51,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (username != null && userId != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                UserPrincipal principal = new UserPrincipal(userId, username);
+                // 老 token 没有 role claim → 按 USER 处理（最小权限）
+                Role role = Role.fromNullable(claims.get(JwtService.CLAIM_ROLE, String.class));
+                UserPrincipal principal = new UserPrincipal(userId, username, role);
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(principal, null, null);
+                        new UsernamePasswordAuthenticationToken(principal, null,
+                                java.util.List.of(new SimpleGrantedAuthority(role.authority())));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
