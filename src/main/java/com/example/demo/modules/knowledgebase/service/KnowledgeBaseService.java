@@ -127,10 +127,19 @@ public class KnowledgeBaseService {
      */
     public void processVectorizeTask(Long kbId, String content) {
         log.info("开始处理后台向量化任务: kbId={}", kbId);
+        // 幂等：先删除该知识库已有的全部向量切片，再整体重写。
+        // 消息可能因为消费者崩溃被回收重放，上一次可能已经写入了一部分批次；
+        // "按 kb_id 先删后写" 保证无论执行几次，最终都只有一份切片，不会出现重复向量。
+        deleteVectorsOf(kbId);
         int chunkCount = vectorizeAndStore(kbId, content);
         knowledgeBaseMapper.updateVectorStatus(kbId, "COMPLETED", null, chunkCount);
         searchService.evictRagCache();
         log.info("后台向量化处理完成: kbId={}, chunkCount={}", kbId, chunkCount);
+    }
+
+    void deleteVectorsOf(Long kbId) {
+        vectorStore.delete(new org.springframework.ai.vectorstore.filter.FilterExpressionBuilder()
+                .eq("kb_id", String.valueOf(kbId)).build());
     }
 
     private int vectorizeAndStore(Long knowledgeBaseId, String content) {

@@ -177,6 +177,12 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- 集成测试：有 Docker 时用 Testcontainers 启动 Redis（版本由 Spring Boot BOM 管理） -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!--lombok-->
     <dependency>
         <groupId>org.projectlombok</groupId>

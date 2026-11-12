@@ -84,6 +84,11 @@ public class VectorizeStreamConsumer extends AbstractStreamConsumer<VectorizeStr
             log.warn("[Redis Stream 消费] 知识库已不存在，跳过向量化: kbId={}", kbId);
             return;
         }
+        // 幂等：已完成的任务（例如 ACK 前崩溃导致被回收重放）直接跳过，避免重复调用 Embedding
+        if ("COMPLETED".equals(kb.getVectorStatus())) {
+            log.info("[Redis Stream 消费] 知识库已向量化完成，跳过重复任务: kbId={}", kbId);
+            return;
+        }
 
         log.info("[Redis Stream 消费] 开始异步执行知识库切词与向量化: kbId={}", kbId);
         knowledgeBaseService.processVectorizeTask(kbId, payload.content());

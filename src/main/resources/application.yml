@@ -43,6 +43,15 @@ jwt:
 # 默认用哪个供应商；各供应商连接信息在 app.ai.providers.<id>.* 下，key 就是供应商 id。
 # 切换默认模型可在前端界面随时切换，已实现数据库持久化存储与热重载。
 app:
+  # Redis Stream 超时未确认消息回收（AbstractStreamConsumer）
+  redis-stream:
+    reclaim:
+      enabled: true
+      min-idle-seconds: ${STREAM_RECLAIM_MIN_IDLE_SECONDS:60}     # pending 超过多久未 ACK 视为消费者已崩溃
+      interval-seconds: 30                                       # 回收扫描间隔
+      batch-size: 10                                             # 单次 XAUTOCLAIM 认领条数
+      max-deliveries: ${STREAM_MAX_DELIVERIES:5}                 # 最大投递次数（含首次），超过记为失败并 ACK
+      processing-timeout-seconds: 600                            # 处理中心跳最长续期时间
   llamaparse:
     enabled: ${LLAMAPARSE_ENABLED:true}
     api-key: ${LLAMA_CLOUD_API_KEY:${LLAMAPARSE_API_KEY:}}
