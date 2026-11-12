@@ -9,7 +9,6 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20(pgvector)-336791.svg)
 ![Redis](https://img.shields.io/badge/Redis-7.x%20Stream-dc382d.svg)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ed.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 **基于 Modular RAG 架构与多模型高可用网关的企业级 AI 模拟面试、知识库问答与简历智能诊断系统**
 
@@ -295,6 +294,13 @@ AI-Agent-Interview-RAG/
 
 ---
 
+## 🙏 致谢
+
+本项目参考了 [Snailclimb/interview-guide](https://github.com/Snailclimb/interview-guide)（AGPL-3.0），
+在其整体架构思路、前端工程、面试技能题库（`src/main/resources/skills`）等基础上进行了学习、改造与扩展。
+感谢原作者及所有贡献者的开源工作。
+
 ## 📄 开源许可证
 
-本项目基于 [MIT License](LICENSE) 开源。欢迎 Star、Fork、提交 Issue 或 PR！
+许可证信息正在整理中。由于本项目包含源自 [Snailclimb/interview-guide](https://github.com/Snailclimb/interview-guide)（AGPL-3.0）的代码与资源，
+相关部分遵循 AGPL-3.0 的条款。
