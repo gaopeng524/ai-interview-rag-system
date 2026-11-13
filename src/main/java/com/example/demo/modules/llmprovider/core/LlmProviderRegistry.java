@@ -84,7 +84,8 @@ public class LlmProviderRegistry {
         return openAiClientCache.computeIfAbsent(providerId, id -> {
             ProviderConfig config = loadProviderOrThrow(id);
             String activeKey = apiKeyPool.acquireKey(id, config.getApiKey());
-            return ApiPathResolver.buildOpenAiClient(config.getBaseUrl(), activeKey);
+            String endpoint = properties.requireAllowedEndpoint(config.getBaseUrl()).toString();
+            return ApiPathResolver.buildOpenAiClient(endpoint, activeKey);
         });
     }
 

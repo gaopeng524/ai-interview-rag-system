@@ -15,6 +15,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -90,7 +91,7 @@ public class LlmProviderConfigService {
 
         LlmProviderEntity entity = new LlmProviderEntity();
         entity.setId(req.id());
-        entity.setBaseUrl(req.baseUrl());
+        entity.setBaseUrl(properties.requireAllowedEndpoint(req.baseUrl()).toString());
         entity.setApiKey(req.apiKey());
         entity.setModel(req.model());
         entity.setEmbeddingModel(req.embeddingModel());
@@ -110,8 +111,19 @@ public class LlmProviderConfigService {
             throw new BusinessException(ErrorCode.NOT_FOUND, "供应商不存在: " + id);
         }
 
-        if (req.baseUrl() != null) entity.setBaseUrl(req.baseUrl());
-        if (req.apiKey() != null && !req.apiKey().isBlank()) entity.setApiKey(req.apiKey());
+        boolean hasNewKey = req.apiKey() != null && !req.apiKey().isBlank();
+        if (req.baseUrl() != null) {
+            var endpoint = properties.requireAllowedEndpoint(req.baseUrl());
+            String oldUrl = entity.getBaseUrl();
+            String oldKey = entity.getApiKey();
+            if (oldKey != null && !oldKey.isBlank() && !endpoint.toString().equals(oldUrl)
+                    && !sameTrustedHost(oldUrl, endpoint.getHost())
+                    && (!hasNewKey || sharesApiKey(oldKey, req.apiKey()))) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "更换模型主机时必须配置该主机的 API Key");
+            }
+            entity.setBaseUrl(endpoint.toString());
+        }
+        if (hasNewKey) entity.setApiKey(req.apiKey());
         if (req.model() != null) entity.setModel(req.model());
         if (req.embeddingModel() != null) entity.setEmbeddingModel(req.embeddingModel());
         if (req.embeddingDimensions() != null) entity.setEmbeddingDimensions(req.embeddingDimensions());
@@ -120,6 +132,19 @@ public class LlmProviderConfigService {
 
         mapper.update(entity);
         registry.reload();
+    }
+
+    private boolean sameTrustedHost(String oldUrl, String host) {
+        try {
+            return host.equalsIgnoreCase(properties.requireAllowedEndpoint(oldUrl).getHost());
+        } catch (BusinessException ex) {
+            return false;
+        }
+    }
+
+    private static boolean sharesApiKey(String oldKeys, String newKeys) {
+        var existing = Arrays.stream(oldKeys.split(",")).map(String::trim).filter(key -> !key.isEmpty()).toList();
+        return Arrays.stream(newKeys.split(",")).map(String::trim).anyMatch(existing::contains);
     }
 
     @Transactional

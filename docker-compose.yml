@@ -58,7 +58,8 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-123456}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-my-super-secret-key-for-ai-chatbot-project-2026}
+      JWT_SECRET: ${JWT_SECRET:-}
+      LLM_ALLOWED_HOSTS: ${LLM_ALLOWED_HOSTS:-}
     ports:
       - "8080:8080"
 

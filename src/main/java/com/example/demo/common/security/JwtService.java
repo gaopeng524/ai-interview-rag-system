@@ -20,16 +20,15 @@ public class JwtService {
     private final long expirationMs;
 
     public JwtService(
-            @Value("${jwt.secret:mySecretKeyForJwtTokenGenerationMustBeLongEnough1234567890}") String secret,
-            @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
-        // 保证密钥至少256位
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < 32) {
-            byte[] padded = new byte[32];
-            System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
-            keyBytes = padded;
+            @Value("${jwt.secret:}") String secret,
+            @Value("${jwt.expiration-ms:${jwt.expiration:86400000}}") long expirationMs) {
+        if (secret == null || secret.isBlank()
+                || "my-super-secret-key-for-ai-chatbot-project-2026".equals(secret)
+                || "mySecretKeyForJwtTokenGenerationMustBeLongEnough1234567890".equals(secret)) {
+            this.key = Jwts.SIG.HS256.key().build();
+        } else {
+            this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         }
-        this.key = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expirationMs;
     }
 

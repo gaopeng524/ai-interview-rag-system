@@ -35,8 +35,8 @@ mybatis:
   mapper-locations: classpath:mapper/*.xml
 
 jwt:
-  # JWT 签名密钥：生产环境必须用环境变量 JWT_SECRET 覆盖，长度至少 32 字符。
-  secret: ${JWT_SECRET:my-super-secret-key-for-ai-chatbot-project-2026}
+  # 未配置或使用历史示例密钥时将生成进程临时随机密钥；跨重启或多实例共享会话请配置至少 32 字节的 JWT_SECRET。
+  secret: ${JWT_SECRET:}
   expiration: ${JWT_EXPIRATION:86400000}
 
 # ===== 多供应商配置（LlmProviderRegistry 读取这里） =====
@@ -61,6 +61,7 @@ app:
     base-url: ${MEM0_BASE_URL:http://localhost:8888/v1}
     enabled: ${MEM0_ENABLED:true}
   ai:
+    additional-allowed-hosts: ${LLM_ALLOWED_HOSTS:}
     default-provider: xiaomi
     providers:
       xiaomi:
