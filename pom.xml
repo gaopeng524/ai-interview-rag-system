@@ -15,7 +15,10 @@
     <description>demo</description>
     <url/>
     <licenses>
-        <license/>
+        <license>
+            <name>GNU Affero General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.html</url>
+        </license>
     </licenses>
     <developers>
         <developer/>
