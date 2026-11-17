@@ -66,8 +66,10 @@ public class InterviewService {
         // 2. 获取关联知识库或面经考点内容（Grounding 真实考点）
         StringBuilder contextBuilder = new StringBuilder();
         if (request.knowledgeBaseId() != null) {
+            // 归属校验放在 try 之外：不能用别人的知识库出题（下面的 catch 只兜底检索失败）
+            knowledgeBaseService.requireOwned(request.knowledgeBaseId(), userId);
             try {
-                List<Document> docs = knowledgeBaseService.search(skillId, List.of(request.knowledgeBaseId()), 3);
+                List<Document> docs = knowledgeBaseService.search(skillId, List.of(request.knowledgeBaseId()), 3, userId);
                 contextBuilder.append(docs.stream().map(Document::getText).collect(Collectors.joining("\n\n")));
             } catch (Exception e) {
                 log.warn("获取知识库内容用于出题失败: {}", e.getMessage());

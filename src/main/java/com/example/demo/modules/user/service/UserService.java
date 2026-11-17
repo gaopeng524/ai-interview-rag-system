@@ -38,7 +38,32 @@ public class UserService {
         return toResponse(user);
     }
 
+    static final int USERNAME_MIN = 3;
+    static final int USERNAME_MAX = 32;
+    static final int PASSWORD_MIN = 6;
+    /** BCrypt 只使用前 72 字节，超出部分会被静默截断 */
+    static final int PASSWORD_MAX = 72;
+
     public UserDTO.UserResponse createUser(User user) {
+        // 0. 基本校验：原来空用户名 / 空密码会直接 500 或注册出空密码账号
+        if (user == null || user.getUsername() == null || user.getPassword() == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "用户名和密码不能为空");
+        }
+        String username = user.getUsername().trim();
+        if (username.length() < USERNAME_MIN || username.length() > USERNAME_MAX) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "用户名长度需在 " + USERNAME_MIN + "~" + USERNAME_MAX + " 个字符之间");
+        }
+        if (user.getPassword().length() < PASSWORD_MIN || user.getPassword().length() > PASSWORD_MAX) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "密码长度需在 " + PASSWORD_MIN + "~" + PASSWORD_MAX + " 个字符之间");
+        }
+        if (userMapper.findByUsername(username) != null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "用户名已被注册");
+        }
+        user.setUsername(username);
+        user.setId(null); // 主键由数据库生成，忽略请求体里传入的 id
+
         // 1. 密码加密
         String encodedPassword = passwordEncoder.encode(user.getPassword());
         user.setPassword(encodedPassword);
@@ -46,8 +71,12 @@ public class UserService {
         // 管理员只能由 DBA 通过 SQL 授予（见 db/migration/V2__add_user_role.sql 注释）。
         user.setRole(Role.USER.name());
 
-        // 2. 保存数据库
-        userMapper.insert(user);
+        // 2. 保存数据库（并发注册同名用户时由唯一约束兜底）
+        try {
+            userMapper.insert(user);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "用户名已被注册");
+        }
 
         // 3. Entity -> DTO
         return toResponse(user);

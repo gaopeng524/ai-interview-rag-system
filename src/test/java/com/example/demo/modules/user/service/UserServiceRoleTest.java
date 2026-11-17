@@ -36,7 +36,7 @@ class UserServiceRoleTest {
     void registrationCannotSelfGrantAdmin() {
         User req = new User();
         req.setUsername("mallory");
-        req.setPassword("pwd");
+        req.setPassword("pwd-123456");
         req.setRole("ADMIN");
 
         userService.createUser(req);
@@ -67,5 +67,54 @@ class UserServiceRoleTest {
         assertEquals(Role.USER, Role.fromNullable(null));
         assertEquals(Role.USER, Role.fromNullable("superuser"));
         assertEquals(Role.ADMIN, Role.fromNullable("admin"));
+    }
+
+    private static User user(String username, String password) {
+        User u = new User();
+        u.setUsername(username);
+        u.setPassword(password);
+        return u;
+    }
+
+    private void assertRejected(User u) {
+        com.example.demo.common.exception.BusinessException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                com.example.demo.common.exception.BusinessException.class, () -> userService.createUser(u));
+        assertEquals(400, ex.getCode());
+    }
+
+    @Test
+    @DisplayName("注册校验：空用户名 / 空密码 / 过短 / 过长都被拒绝，不写库")
+    void registrationValidation() {
+        assertRejected(user(null, "pwd-123456"));
+        assertRejected(user("alice", null));
+        assertRejected(user("  ", "pwd-123456"));
+        assertRejected(user("ab", "pwd-123456"));
+        assertRejected(user("a".repeat(33), "pwd-123456"));
+        assertRejected(user("alice", "12345"));
+        assertRejected(user("alice", "x".repeat(73)));
+        verify(userMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("用户名已存在：返回 400 而不是 500；并发注册由唯一约束兜底")
+    void duplicateUsername() {
+        when(userMapper.findByUsername("alice")).thenReturn(new User());
+        assertRejected(user("alice", "pwd-123456"));
+
+        when(userMapper.findByUsername("bob")).thenReturn(null);
+        doThrow(new org.springframework.dao.DuplicateKeyException("uk")).when(userMapper).insert(any());
+        assertRejected(user("bob", "pwd-123456"));
+    }
+
+    @Test
+    @DisplayName("注册时忽略请求体里的 id，用户名去掉首尾空格")
+    void registrationNormalizesInput() {
+        User u = user("  carol ", "pwd-123456");
+        u.setId(999L);
+        userService.createUser(u);
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).insert(saved.capture());
+        assertEquals("carol", saved.getValue().getUsername());
+        org.junit.jupiter.api.Assertions.assertNull(saved.getValue().getId());
     }
 }

@@ -19,14 +19,15 @@ public class DatabaseInitConfig {
     public CommandLineRunner initDatabase(KnowledgeBaseMapper knowledgeBaseMapper, JdbcTemplate jdbcTemplate) {
         return args -> {
             log.info("初始化数据库表...");
-            // 版本化迁移脚本（幂等）：按文件名顺序执行 classpath:db/migration/*.sql
-            runMigrations(jdbcTemplate);
             try {
                 knowledgeBaseMapper.createTable();
                 log.info("知识库表检查/创建成功");
             } catch (Exception e) {
                 log.error("创建知识库表失败: {}", e.getMessage(), e);
             }
+            // 版本化迁移脚本（幂等）：按文件名顺序执行 classpath:db/migration/*.sql
+            // 放在知识库建表之后，V3 才能在全新数据库上一次建好 user_id 索引
+            runMigrations(jdbcTemplate);
 
             try {
                 // 确保 chat_sessions 表字段完整

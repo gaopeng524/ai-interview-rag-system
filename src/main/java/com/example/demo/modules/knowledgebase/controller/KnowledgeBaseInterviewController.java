@@ -2,6 +2,7 @@ package com.example.demo.modules.knowledgebase.controller;
 
 import com.example.demo.common.annotation.RateLimit;
 import com.example.demo.common.result.Result;
+import com.example.demo.common.security.CurrentUser;
 import com.example.demo.common.security.UserPrincipal;
 import com.example.demo.modules.interview.model.dto.InterviewDTO;
 import com.example.demo.modules.interview.service.InterviewService;
@@ -25,6 +26,18 @@ public class KnowledgeBaseInterviewController {
 
     private final KnowledgeBaseQuestionService questionService;
     private final InterviewService interviewService;
+    private final com.example.demo.modules.knowledgebase.service.KnowledgeBaseService knowledgeBaseService;
+
+    /** 考题接口统一入口：知识库必须属于当前用户 */
+    private void requireOwnedKb(Long kbId, UserPrincipal principal) {
+        knowledgeBaseService.requireOwned(kbId, CurrentUser.requireId(principal));
+    }
+
+    /** 按考题 id 操作时，先找到它所属的知识库再校验归属 */
+    private void requireOwnedQuestion(Long questionId, UserPrincipal principal) {
+        Long userId = CurrentUser.requireId(principal);
+        knowledgeBaseService.requireOwned(questionService.knowledgeBaseIdOf(questionId), userId);
+    }
 
     /**
      * 获取指定知识库的考题列表（支持状态、分类、难度、关键词搜索）
@@ -36,7 +49,9 @@ public class KnowledgeBaseInterviewController {
             @RequestParam(required = false) KnowledgeBaseQuestionStatus status,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String difficulty,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedKb(id, principal);
         return Result.success(questionService.listQuestions(id, status, category, difficulty, keyword));
     }
 
@@ -45,7 +60,9 @@ public class KnowledgeBaseInterviewController {
      * GET /api/knowledgebase/{id}/questions/categories
      */
     @GetMapping("/api/knowledgebase/{id}/questions/categories")
-    public Result<List<KnowledgeBaseQuestionDTO.CategoryCount>> listCategories(@PathVariable Long id) {
+    public Result<List<KnowledgeBaseQuestionDTO.CategoryCount>> listCategories(@PathVariable Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedKb(id, principal);
         return Result.success(questionService.listCategories(id));
     }
 
@@ -57,7 +74,9 @@ public class KnowledgeBaseInterviewController {
     @RateLimit(dimension = RateLimit.Dimension.IP, count = 5, interval = 60)
     public Result<KnowledgeBaseQuestionDTO.QuestionGenStatusResponse> generateQuestions(
             @PathVariable Long id,
-            @RequestBody(required = false) KnowledgeBaseQuestionDTO.GenerateQuestionsRequest request) {
+            @RequestBody(required = false) KnowledgeBaseQuestionDTO.GenerateQuestionsRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedKb(id, principal);
         log.info("接收到知识库智能提炼考题请求: kbId={}", id);
         return Result.success(questionService.submitGenerationTask(id, request));
     }
@@ -68,7 +87,9 @@ public class KnowledgeBaseInterviewController {
      */
     @GetMapping("/api/knowledgebase/{id}/questions/generation-status")
     public Result<KnowledgeBaseQuestionDTO.QuestionGenStatusResponse> getQuestionGenerationStatus(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedKb(id, principal);
         return Result.success(questionService.getGenerationStatus(id));
     }
 
@@ -79,7 +100,9 @@ public class KnowledgeBaseInterviewController {
     @PostMapping("/api/knowledgebase/{id}/questions")
     public Result<KnowledgeBaseQuestionDTO.QuestionItem> createQuestion(
             @PathVariable Long id,
-            @RequestBody KnowledgeBaseQuestionDTO.SaveQuestionRequest request) {
+            @RequestBody KnowledgeBaseQuestionDTO.SaveQuestionRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedKb(id, principal);
         return Result.success(questionService.createQuestion(id, request));
     }
 
@@ -90,7 +113,9 @@ public class KnowledgeBaseInterviewController {
     @PutMapping("/api/knowledgebase/questions/{questionId}")
     public Result<KnowledgeBaseQuestionDTO.QuestionItem> updateQuestion(
             @PathVariable Long questionId,
-            @RequestBody KnowledgeBaseQuestionDTO.SaveQuestionRequest request) {
+            @RequestBody KnowledgeBaseQuestionDTO.SaveQuestionRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedQuestion(questionId, principal);
         return Result.success(questionService.updateQuestion(questionId, request));
     }
 
@@ -101,7 +126,9 @@ public class KnowledgeBaseInterviewController {
     @PutMapping("/api/knowledgebase/questions/{questionId}/status")
     public Result<KnowledgeBaseQuestionDTO.QuestionItem> updateQuestionStatus(
             @PathVariable Long questionId,
-            @RequestBody KnowledgeBaseQuestionDTO.UpdateStatusRequest request) {
+            @RequestBody KnowledgeBaseQuestionDTO.UpdateStatusRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedQuestion(questionId, principal);
         return Result.success(questionService.updateStatus(questionId, request != null ? request.status() : null));
     }
 
@@ -110,7 +137,9 @@ public class KnowledgeBaseInterviewController {
      * DELETE /api/knowledgebase/questions/{questionId}
      */
     @DeleteMapping("/api/knowledgebase/questions/{questionId}")
-    public Result<Void> deleteQuestion(@PathVariable Long questionId) {
+    public Result<Void> deleteQuestion(@PathVariable Long questionId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedQuestion(questionId, principal);
         questionService.deleteQuestion(questionId);
         return Result.success(null);
     }
@@ -124,7 +153,9 @@ public class KnowledgeBaseInterviewController {
             @PathVariable Long id,
             @RequestParam(required = false, defaultValue = "MEDIUM") String difficulty,
             @RequestParam(required = false, defaultValue = "5") int mainQuestionCount,
-            @RequestParam(required = false) String category) {
+            @RequestParam(required = false) String category,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UserPrincipal principal) {
+        requireOwnedKb(id, principal);
         return Result.success(questionService.getInterviewCapacity(id, difficulty, mainQuestionCount, category));
     }
 }

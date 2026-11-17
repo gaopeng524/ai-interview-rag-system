@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class KnowledgeBase {
     private Long id;
+    private Long userId;              // 归属用户
     private String name;              // 知识库名称
     private String originalFilename;  // 原始文件名
     private Long fileSize;            // 文件大小

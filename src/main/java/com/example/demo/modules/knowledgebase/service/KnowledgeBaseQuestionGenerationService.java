@@ -176,7 +176,7 @@ public class KnowledgeBaseQuestionGenerationService {
         log.info("🚀 [知识库出题任务] 开始执行面经题目提炼: kbId={}, count={}, difficulty={}", kbId, targetCount, difficulty);
 
         // 1. 获取知识库检索上下文内容
-        List<KnowledgeBaseDTO.SearchResultItem> chunks = knowledgeBaseService.searchSemantic(
+        List<KnowledgeBaseDTO.SearchResultItem> chunks = knowledgeBaseService.searchSemanticInternal(
                 new KnowledgeBaseDTO.SearchRequest("核心面试要点 架构设计 算法与常见技术问答", List.of(kbId), 15)
         );
 
