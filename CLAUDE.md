@@ -169,25 +169,65 @@
 
 ---
 
+### 🌟 阶段五：安全加固、角色权限与消息可靠消费 (2026-11)
+
+#### 1. 鉴权与资源归属
+* **接口必须登录**：去掉 `/api/resumes/**`、`/api/voice-interview/**` 的匿名放行，只有 `GET /api/interview/skills/**` 公开。
+* **不再回退到默认用户**：Controller 统一通过 `CurrentUser.requireId(principal)` 取用户，拿不到直接 401（原来会当成 1 号用户）。
+* **归属校验**：简历、面试会话、知识库及其考题按 id 访问时一律校验归属；userId 为空、资源无归属人或不是本人均返回 403，且先判断身份再查库。
+* **知识库按用户隔离**：`knowledge_bases.user_id`；列表、统计、去重都限定在本人名下；语义检索和 RAG 问答先解析当前用户可访问的范围，不指定知识库时只检索本人的知识库。删除知识库时同时清理向量切片与考题。
+* **用户接口**：`GET /users` 仅管理员；`GET /users/{id}` 仅本人或管理员；注册校验用户名 / 密码长度并拒绝重名。
+
+#### 2. 角色权限
+* `users.role`（USER / ADMIN，默认 USER），角色写入 JWT；开启方法级鉴权，模型配置的增删改、切换默认模型、重载仅 ADMIN。
+* 注册接口强制 USER，管理员只能通过 SQL 授予：`UPDATE users SET role = 'ADMIN' WHERE username = '...'`（需重新登录生效）。
+* JWT 未配置密钥时每次启动生成随机密钥；模型供应商地址做主机白名单校验（防 SSRF）。
+
+#### 3. Redis Streams 超时消息回收
+* `AbstractStreamConsumer` 在消费线程里定时 `XAUTOCLAIM` 回收空闲超过 `min-idle-seconds`（默认 60）的未确认消息，`XPENDING` 取投递次数，超过 `max-deliveries`（默认 5）记为失败并 ACK。
+* 处理期间用 `XCLAIM ... JUSTID` 续期（不增加投递次数），慢任务不会被其它节点误抢。
+* 幂等：面试评估为覆盖式更新 + 已完成跳过；知识库向量化改为按 `kb_id` 先删后写。
+
+#### 4. 数据库迁移
+* `src/main/resources/db/migration/*.sql`：幂等脚本，按文件名顺序在启动时由 `DatabaseInitConfig.runMigrations` 执行。
+  * `V2__add_user_role.sql`：`users.role` 及取值约束；
+  * `V3__knowledge_base_owner.sql`：`knowledge_bases.user_id`，存量数据划给最早注册的用户。
+
+#### 5. 仓库整理
+* 学习笔记移入 `docs/`（`代码学习.md`、`xiaomimodel.md`、`obsidian/`），Python 评测脚本移入 `scripts/`；前端只保留 `pnpm-lock.yaml`。
+* 项目基于 [Snailclimb/interview-guide](https://github.com/Snailclimb/interview-guide) 二次开发，以 AGPL-3.0 发布（见 `LICENSE` 与 README）。
+
+---
+
 ## 🧪 全量自动化测试用例清单
 
-全系统共建立 6 大测试套件，**20 个单元测试全部 100% 通过（`BUILD SUCCESS`）**：
+> 本节于 2026-11 按仓库实际情况重写：此前列出的 6 个测试类（`ChatResilienceServiceTest` 等，共 20 个用例）在仓库中并不存在。
 
-| 测试类 | 用例数 | 覆盖核心业务 |
-| :--- | :---: | :--- |
-| `ChatResilienceServiceTest` | 4 | 多模型重试、熔断与容灾降级机制 |
-| `InterviewServiceTest` | 5 | 模拟面试出题、作答流转、综合评分与报告生成 |
-| `InterviewParseServiceTest` | 2 | 飞书、腾讯会议、Zoom 邀约文本智能结构化提取 |
-| `InterviewScheduleServiceTest` | 3 | 面试日程 CRUD、日历视图范围过滤与状态更新 |
-| `KnowledgeBaseQuestionServiceTest` | 2 | 知识库考题新增、分类聚类统计与出题流程 |
-| `ResumeServiceTest` | 4 | 简历 SHA-256 秒传、六维雷达打分与 STAR 法则诊断 |
-| **总计** | **20** | **全量通过（0 Failures / 0 Errors）** |
+直接运行 `mvn test` 即可，不依赖外部服务；需要真实中间件的用例在缺少环境时自动跳过。
+
+| 测试类 | 用例数 | 覆盖内容 | 运行条件 |
+| :--- | :---: | :--- | :--- |
+| `PromptSanitizerTest` | 3 | Prompt 注入清洗与边界隔离 | 无 |
+| `TraceManagerTest` | 3 | 调用链 Trace 的层级、耗时与标签 | 无 |
+| `SecurityConfigAccessTest` | 5 | 简历 / 语音面试接口必须登录，401 / 403 / 200 | 无 |
+| `ResumeServiceOwnershipTest` | 7 | 简历归属校验 | 无 |
+| `InterviewServiceOwnershipTest` | 8 | 面试会话归属校验 | 无 |
+| `KnowledgeBaseOwnershipTest` | 10 | 知识库归属校验与检索范围 | 无 |
+| `KnowledgeBaseAccessTest` | 4 | 知识库与考题接口的 HTTP 层隔离 | 无 |
+| `UserControllerAccessTest` | 3 | 用户接口权限 | 无 |
+| `UserServiceRoleTest` | 6 | 注册校验、角色写入 JWT | 无 |
+| `LlmProviderControllerAuthorizationTest` | 37 | 模型配置写接口仅 ADMIN | 无 |
+| `LlmProviderSecurityTest` | 3 | JWT 密钥与模型地址白名单 | 无 |
+| `VectorizeIdempotencyTest` | 2 | 向量化先删后写、已完成跳过 | 无 |
+| `StreamReclaimIntegrationTest` | 4 | Streams 超时消息回收、毒消息、慢任务不被抢 | Docker（Testcontainers）或 `TEST_REDIS_HOST` |
+| `KnowledgeBaseMapperIntegrationTest` | 1 | Mapper SQL 与 V3 迁移脚本 | `TEST_PG_URL` |
+| `RealProjectRagBenchmarkTest` | 1 | RAG 检索与回答质量评测 | `-Drag.benchmark=true`，需 pgvector、Redis、大模型 Key |
 
 ---
 
 ## 📂 数据库全量表结构字典
 
-1. `users`：用户账号与密码表；
+1. `users`：用户账号与密码表（`role`：USER / ADMIN）；
 2. `llm_provider_config`：大模型供应商配置表（支持动态热重载）；
 3. `resumes`：简历表（支持文件哈希秒传）；
 4. `resume_analysis_reports`：简历六维诊断与 STAR 建议报告表；
@@ -195,7 +235,7 @@
 6. `interview_questions`：面试考题、回答与考官评分表；
 7. `interview_evaluations`：面试综合评估与能力雷达得分表；
 8. `interview_schedules`：面试日程管理表；
-9. `knowledge_bases`：知识库文档元数据表；
+9. `knowledge_bases`：知识库文档元数据表（`user_id`：归属用户）；
 10. `vector_store`：PostgreSQL pgvector 高维语义向量切片表；
 11. `knowledge_base_questions`：面经智能提炼考题与题库表；
 12. `chat_sessions` / `chat_session_knowledge_bases` / `chat_messages`：多轮 RAG 对话会话与消息历史表。

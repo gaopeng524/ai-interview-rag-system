@@ -30,6 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 🏆 纯血 Ragas 官方数学算法 + 100% 穿透项目全链路 RAG 量化评测套件
  */
 @SpringBootTest
+// 需要真实的 PostgreSQL(pgvector)、Redis 和大模型 Key，并会产生调用费用，所以默认不随 mvn test 运行。
+// 手动运行：mvn test -Dtest=RealProjectRagBenchmarkTest -Drag.benchmark=true
+@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "rag.benchmark", matches = "true")
 public class RealProjectRagBenchmarkTest {
 
     @Autowired

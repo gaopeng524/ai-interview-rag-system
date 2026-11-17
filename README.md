@@ -255,9 +255,10 @@ AI-Agent-Interview-RAG/
 │   │       ├── mapper/                 # MyBatis XML 映射文件
 │   │       └── application.yml         # 核心配置文件
 │   └── test/                           # 全量单元测试与 RAG 真实项目度量基准测试
+├── docs/                               # 学习与研发笔记（代码学习.md、Obsidian 笔记等）
+├── scripts/                            # 辅助脚本（eval_ragas.py：Python 版 Ragas 评测）
 ├── docker-compose.yml                  # 全栈生产级 Docker 编排文件
 ├── Dockerfile                          # 后端 Maven 多阶段构建镜像定义
-├── 代码学习.md                          # 57 个架构专题研发与技术细节深度解析手记
 └── pom.xml                             # Maven 依赖清单
 ```
 
@@ -268,14 +269,14 @@ AI-Agent-Interview-RAG/
 系统内置完备的单元测试与学术评测套件，覆盖核心容灾、数据安全、算法与业务闭环：
 
 ```bash
-# 运行离线单测与 Testcontainers Redis 集成测试（排除需要本地 PostgreSQL 实库的 Benchmark）
-mvn clean test -Dtest=!RealProjectRagBenchmarkTest
+# 运行离线单测与 Testcontainers Redis 集成测试（RAG Benchmark 默认不运行，见下）
+mvn clean test
 
 # 运行 Prompt 防越狱、角色鉴权与 SSRF 安全测试
 mvn test -Dtest=PromptSanitizerTest,LlmProviderControllerAuthorizationTest,LlmProviderSecurityTest
 
-# 在启动 PostgreSQL/Redis 与模型配置后，运行真实项目 RAG 基准评测
-mvn test -Dtest=RealProjectRagBenchmarkTest
+# 在启动 PostgreSQL/Redis 与模型配置后，运行真实项目 RAG 基准评测（会调用大模型，需显式开启）
+mvn test -Dtest=RealProjectRagBenchmarkTest -Drag.benchmark=true
 ```
 
 ---

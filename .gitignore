@@ -64,3 +64,5 @@ tmp/
 .DS_Store
 Thumbs.db
 Desktop.ini
+# Obsidian 的本机窗口状态，每台机器不同，由 Obsidian 自动生成
+.obsidian/workspace.json
