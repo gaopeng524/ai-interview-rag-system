@@ -9,6 +9,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20(pgvector)-336791.svg)
 ![Redis](https://img.shields.io/badge/Redis-7.x%20Stream-dc382d.svg)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ed.svg)
+![License](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)
 
 **基于 pgvector RAG 检索、多模型高可用网关与企业级安全权限体系的 AI 模拟面试、知识库问答与简历智能诊断系统**
 
@@ -19,6 +20,11 @@
 ---
 
 ## 📖 项目简介
+
+> 本项目基于开源项目 [Snailclimb/interview-guide](https://github.com/Snailclimb/interview-guide)（AGPL-3.0）二次开发。
+> 简历分析、模拟面试出题与评估、面试方向配置（`src/main/resources/skills`）、多模型接入和前端工程来自原项目；
+> 本仓库在此基础上新增了 JWT 鉴权与资源归属校验、USER / ADMIN 角色、Redis Streams 超时消息回收与消费幂等、
+> 父子分块与 Modular RAG 原型、检索评测、多轮会话记忆、流式重试以及调用追踪与成本统计。详见文末 [致谢](#-致谢) 与 [开源许可证](#-开源许可证)。
 
 **AI-Agent-Interview-RAG** 是一套面向企业真实生产标准打造的全栈 AI 智能求职与知识库辅导系统。系统深度整合 **Spring AI 2.0.0 GA**、**PostgreSQL (pgvector)** 与 **Redis Stream**，不仅实现了全流程的“简历诊断 ➔ 知识库考题提炼 ➔ 全真模拟面试 ➔ STAR 法则复盘 ➔ 日程管理”，更在底层落地了**学术级 Modular RAG 流水线**、**多供应商大模型毫秒级主备级联容灾网关**、**流式推理 Token 成本精准计量**以及**动态 UUID 边界 Prompt 防越狱体系**。
 
@@ -276,11 +282,15 @@ mvn test -Dtest=RealProjectRagBenchmarkTest
 
 ## 🙏 致谢
 
-本项目参考了 [Snailclimb/interview-guide](https://github.com/Snailclimb/interview-guide)（AGPL-3.0），
-在其整体架构思路、前端工程、面试技能题库（`src/main/resources/skills`）等基础上进行了学习、改造与扩展。
+本项目基于 [Snailclimb/interview-guide](https://github.com/Snailclimb/interview-guide)（AGPL-3.0）二次开发，
+沿用了其整体架构、前端工程与面试技能题库（`src/main/resources/skills`），并在此基础上改造和扩展。
 感谢原作者及所有贡献者的开源工作。
 
 ## 📄 开源许可证
 
-许可证信息正在整理中。由于本项目包含源自 [Snailclimb/interview-guide](https://github.com/Snailclimb/interview-guide)（AGPL-3.0）的代码与资源，
-相关部分遵循 AGPL-3.0 的条款。
+本项目以 [GNU Affero General Public License v3.0](LICENSE)（AGPL-3.0）发布。
+
+- 源自 interview-guide 的代码与资源，版权归原作者及其贡献者所有；
+- 本仓库新增和修改的部分 Copyright © 2026 gaopeng524，同样以 AGPL-3.0 发布。
+
+按照 AGPL-3.0，如果你修改本项目并通过网络对外提供服务，需要向使用者提供修改后的完整源代码。
