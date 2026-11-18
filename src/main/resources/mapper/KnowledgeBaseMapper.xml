@@ -2,10 +2,18 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.demo.modules.knowledgebase.mapper.KnowledgeBaseMapper">
 
-    <!-- 创建知识库表 -->
+    <sql id="columns">
+        id, user_id as userId, name, original_filename as originalFilename, file_size as fileSize,
+        content_type as contentType, file_hash as fileHash, category,
+        vector_status as vectorStatus, vector_error as vectorError,
+        chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
+    </sql>
+
+    <!-- 创建知识库表（user_id：归属用户，所有面向用户的查询都按它过滤） -->
     <update id="createTable">
         CREATE TABLE IF NOT EXISTS knowledge_bases (
             id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT,
             name VARCHAR(200) NOT NULL,
             original_filename VARCHAR(500),
             file_size BIGINT,
@@ -20,28 +28,18 @@
         )
     </update>
 
-    <!-- 插入知识库 -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO knowledge_bases (name, original_filename, file_size, content_type, file_hash, category, vector_status)
-        VALUES (#{name}, #{originalFilename}, #{fileSize}, #{contentType}, #{fileHash}, #{category}, #{vectorStatus})
+        INSERT INTO knowledge_bases (user_id, name, original_filename, file_size, content_type, file_hash, category, vector_status)
+        VALUES (#{userId}, #{name}, #{originalFilename}, #{fileSize}, #{contentType}, #{fileHash}, #{category}, #{vectorStatus})
     </insert>
 
-    <!-- 根据ID查询 -->
+    <!-- 按主键查询（不带归属过滤，仅供内部任务和归属校验使用） -->
     <select id="findById" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
-        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
-               content_type as contentType, file_hash as fileHash, category,
-               vector_status as vectorStatus, vector_error as vectorError,
-               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
-        FROM knowledge_bases WHERE id = #{id}
+        SELECT <include refid="columns"/> FROM knowledge_bases WHERE id = #{id}
     </select>
 
-    <!-- 根据ID列表查询 -->
     <select id="findByIds" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
-        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
-               content_type as contentType, file_hash as fileHash, category,
-               vector_status as vectorStatus, vector_error as vectorError,
-               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
-        FROM knowledge_bases
+        SELECT <include refid="columns"/> FROM knowledge_bases
         WHERE id IN
         <foreach item="id" collection="ids" open="(" separator="," close=")">
             #{id}
@@ -49,53 +47,44 @@
         ORDER BY uploaded_at DESC
     </select>
 
-    <!-- 查询所有知识库 -->
-    <select id="findAll" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
-        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
-               content_type as contentType, file_hash as fileHash, category,
-               vector_status as vectorStatus, vector_error as vectorError,
-               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
-        FROM knowledge_bases ORDER BY uploaded_at DESC
+    <!-- ===== 以下查询全部限定在某个用户名下 ===== -->
+
+    <select id="findAllByUser" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
+        SELECT <include refid="columns"/> FROM knowledge_bases
+        WHERE user_id = #{userId} ORDER BY uploaded_at DESC
     </select>
 
-    <!-- 根据文件哈希查询 -->
+    <select id="findIdsByUser" resultType="java.lang.Long">
+        SELECT id FROM knowledge_bases WHERE user_id = #{userId}
+    </select>
+
+    <!-- 文件哈希去重只在同一用户内生效，避免上传相同文件时拿到别人的知识库 -->
     <select id="findByFileHash" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
-        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
-               content_type as contentType, file_hash as fileHash, category,
-               vector_status as vectorStatus, vector_error as vectorError,
-               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
-        FROM knowledge_bases WHERE file_hash = #{fileHash}
+        SELECT <include refid="columns"/> FROM knowledge_bases
+        WHERE user_id = #{userId} AND file_hash = #{fileHash}
+        ORDER BY id LIMIT 1
     </select>
 
-    <!-- 按名称搜索知识库 -->
     <select id="searchByName" resultType="com.example.demo.modules.knowledgebase.model.entity.KnowledgeBase">
-        SELECT id, name, original_filename as originalFilename, file_size as fileSize,
-               content_type as contentType, file_hash as fileHash, category,
-               vector_status as vectorStatus, vector_error as vectorError,
-               chunk_count as chunkCount, uploaded_at as uploadedAt, updated_at as updatedAt
-        FROM knowledge_bases
-        WHERE name ILIKE '%' || #{keyword} || '%'
+        SELECT <include refid="columns"/> FROM knowledge_bases
+        WHERE user_id = #{userId} AND name ILIKE '%' || #{keyword} || '%'
         ORDER BY uploaded_at DESC
     </select>
 
-    <!-- 获取所有分类 -->
     <select id="findAllCategories" resultType="java.lang.String">
         SELECT DISTINCT category FROM knowledge_bases
-        WHERE category IS NOT NULL AND category != ''
+        WHERE user_id = #{userId} AND category IS NOT NULL AND category != ''
         ORDER BY category
     </select>
 
-    <!-- 获取总数 -->
     <select id="countAll" resultType="int">
-        SELECT COUNT(*) FROM knowledge_bases
+        SELECT COUNT(*) FROM knowledge_bases WHERE user_id = #{userId}
     </select>
 
-    <!-- 按状态统计 -->
     <select id="countByVectorStatus" resultType="int">
-        SELECT COUNT(*) FROM knowledge_bases WHERE vector_status = #{status}
+        SELECT COUNT(*) FROM knowledge_bases WHERE user_id = #{userId} AND vector_status = #{status}
     </select>
 
-    <!-- 更新向量化状态 -->
     <update id="updateVectorStatus">
         UPDATE knowledge_bases
         SET vector_status = #{vectorStatus},
@@ -105,7 +94,6 @@
         WHERE id = #{id}
     </update>
 
-    <!-- 删除知识库 -->
     <delete id="deleteById">
         DELETE FROM knowledge_bases WHERE id = #{id}
     </delete>

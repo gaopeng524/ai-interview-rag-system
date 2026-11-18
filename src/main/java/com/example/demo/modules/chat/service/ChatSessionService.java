@@ -28,6 +28,13 @@ public class ChatSessionService {
     private final ChatMemoryService chatMemoryService;
     private final com.example.demo.common.ai.AiStructuredClient aiStructuredClient;
 
+    /** 会话只能关联当前用户自己的知识库（未指定时不关联任何知识库） */
+    private void requireOwnKnowledgeBases(List<Long> knowledgeBaseIds, Long userId) {
+        if (knowledgeBaseIds != null && !knowledgeBaseIds.isEmpty()) {
+            knowledgeBaseService.resolveSearchScope(knowledgeBaseIds, userId);
+        }
+    }
+
     /**
      * 创建新会话（支持关联知识库列表）
      */
@@ -43,6 +50,7 @@ public class ChatSessionService {
      */
     @Transactional
     public RagChatDTO.SessionResponse create(Long userId, List<Long> knowledgeBaseIds, String title) {
+        requireOwnKnowledgeBases(knowledgeBaseIds, userId);
         String sessionTitle = (title != null && !title.isBlank()) ? title.trim() : "新对话";
 
         ChatSession session = new ChatSession();
@@ -168,6 +176,7 @@ public class ChatSessionService {
         if (session == null) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "无权访问该聊天会话");
         }
+        requireOwnKnowledgeBases(knowledgeBaseIds, userId);
         chatSessionMapper.deleteSessionKnowledgeBases(sessionId);
         if (knowledgeBaseIds != null && !knowledgeBaseIds.isEmpty()) {
             chatSessionMapper.insertSessionKnowledgeBases(sessionId, knowledgeBaseIds);

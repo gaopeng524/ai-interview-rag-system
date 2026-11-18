@@ -36,7 +36,8 @@ class VectorizeIdempotencyTest {
         when(chunker.chunkToParentChildDocuments(anyString(), any(), any(), eq(5L)))
                 .thenReturn(List.of(new Document("a", Map.of("kb_id", "5")), new Document("b", Map.of("kb_id", "5"))));
         KnowledgeBaseService service = new KnowledgeBaseService(vectorStore, null, mapper, null,
-                mock(KnowledgeBaseSearchService.class), null, chunker);
+                mock(KnowledgeBaseSearchService.class), null, chunker,
+                mock(com.example.demo.modules.knowledgebase.mapper.KnowledgeBaseQuestionMapper.class));
 
         // 第一次执行（模拟崩溃前）与第二次执行（回收重放）
         service.processVectorizeTask(5L, "content");

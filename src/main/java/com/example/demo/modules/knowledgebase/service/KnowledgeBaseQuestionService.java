@@ -92,6 +92,15 @@ public class KnowledgeBaseQuestionService {
         return toDTO(entity);
     }
 
+    /** 考题所属的知识库 id（用于归属校验）；考题不存在抛 404 */
+    public Long knowledgeBaseIdOf(Long questionId) {
+        KnowledgeBaseQuestionEntity entity = questionMapper.findById(questionId);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "考题不存在: " + questionId);
+        }
+        return entity.getKnowledgeBaseId();
+    }
+
     /**
      * 编辑更新考题
      */

@@ -67,7 +67,9 @@ public class ChatService {
         }
 
         // 2. 获取该会话关联的所有知识库 ID
-        List<Long> knowledgeBaseIds = chatSessionService.getKnowledgeBaseIds(sessionId);
+        // 只保留仍属于当前用户的知识库（关联的知识库可能已被删除）
+        List<Long> knowledgeBaseIds = knowledgeBaseService.filterOwned(
+                chatSessionService.getKnowledgeBaseIds(sessionId), userId);
         TraceManager.tag("kbIds", knowledgeBaseIds);
 
         // 3. 从 Redis/DB 加载滚动前情提要与短期历史上下文（最近 4 条）
@@ -92,7 +94,7 @@ public class ChatService {
         String enhancedContent = content;
         if (knowledgeBaseIds != null && !knowledgeBaseIds.isEmpty()) {
             enhancedContent = TraceManager.record("rag.knowledge.enhance", () ->
-                    enhanceWithRAG(content, knowledgeBaseIds, summary)
+                    enhanceWithRAG(content, knowledgeBaseIds, summary, userId)
             );
         } else if (!summary.isBlank()) {
             enhancedContent = String.format("【前情提要】：%s\n\n用户问题：%s", summary, content);
@@ -141,11 +143,11 @@ public class ChatService {
     /**
      * RAG 增强：基于关联知识库搜索相关文档，并融合前情提要（保持客观纯粹）
      */
-    private String enhanceWithRAG(String question, List<Long> knowledgeBaseIds, String summary) {
+    private String enhanceWithRAG(String question, List<Long> knowledgeBaseIds, String summary, Long userId) {
         try {
             // 动态自适应搜索：短句宽召回、中长句精召回（Top-K 自动 2~4 档位）+ 相似度阈值过滤 + 确定性排序
             List<Document> docs = TraceManager.record("rag.vector.search", () -> {
-                List<Document> result = knowledgeBaseService.search(question, knowledgeBaseIds);
+                List<Document> result = knowledgeBaseService.search(question, knowledgeBaseIds, 4, userId);
                 TraceManager.tag("candidateHitCount", result.size());
                 return result;
             });

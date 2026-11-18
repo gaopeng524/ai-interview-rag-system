@@ -61,16 +61,16 @@ public class RealProjectRagBenchmarkTest {
 
     private Long testKbId;
     private static final String BENCHMARK_FILE_HASH = "BENCHMARK_RAG_V4_PENETRATION_DOCX";
+    private static final Long BENCHMARK_OWNER_ID = 0L;
 
     @BeforeEach
     public void setupRealKnowledgeBase() throws Exception {
-        List<KnowledgeBase> existingList = knowledgeBaseMapper.findAll();
-        for (KnowledgeBase kb : existingList) {
-            if (BENCHMARK_FILE_HASH.equals(kb.getFileHash())) {
-                testKbId = kb.getId();
-                System.out.printf("⚡ [评测基准数据命中] 复用已有的持久化真实评测库: id=%d, name=%s\n", testKbId, kb.getName());
-                return;
-            }
+        // 评测知识库挂在一个不对应任何真实用户的固定 id 下，普通用户看不到它
+        KnowledgeBase existing = knowledgeBaseMapper.findByFileHash(BENCHMARK_OWNER_ID, BENCHMARK_FILE_HASH);
+        if (existing != null) {
+            testKbId = existing.getId();
+            System.out.printf("⚡ [评测基准数据命中] 复用已有的持久化真实评测库: id=%d, name=%s\n", testKbId, existing.getName());
+            return;
         }
 
         byte[] docxBytes = DocxBenchmarkHelper.createBenchmarkDocxWithTable();
@@ -86,6 +86,7 @@ public class RealProjectRagBenchmarkTest {
         System.out.printf("✅ [文档解析成功] 获得标准 Markdown 正文，长度: %d 字符\n", parsedMarkdown.length());
 
         KnowledgeBase kb = new KnowledgeBase();
+        kb.setUserId(BENCHMARK_OWNER_ID);
         kb.setName("RAG真机全链路量化评测知识库(带表格与LlamaParse)");
         kb.setOriginalFilename("BigTechDocument.docx");
         kb.setFileSize((long) docxBytes.length);
